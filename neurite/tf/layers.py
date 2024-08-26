@@ -628,6 +628,308 @@ class RandomClip(Layer):
         return tf.clip_by_value(x, clip_value_min=low, clip_value_max=upp)
 
 
+class RandomGamma(Layer):
+    """Exponentiate the voxel intensities of a tensor by a random parameter.
+
+    The layer draws gamma parameters from a uniform distribution.
+
+    If you find this layer useful, please cite:
+        Anatomy-specific acquisition-agnostic affine registration learned from fictitious images
+        M Hoffmann, A Hoopes, B Fischl*, AV Dalca* (*equal contribution)
+        SPIE Medical Imaging: Image Processing, 12464, p 1246402, 2023
+        https://doi.org/10.1117/12.2653251
+    """
+
+    def __init__(self,
+                 low=0.5,
+                 high=2,
+                 shared=False,
+                 seed=None,
+                 **kwargs):
+        """
+        Parameters:
+            low: Lower bound on the sampled exponents, as a scalar.
+            high: Upper bound on the sampled exponents, as a scalar.
+            shared: Apply the same gamma exponentiation across all channels.
+            seed: Integer for reproducible randomization.
+        """
+        self.low = low
+        self.high = high
+        self.shared = shared
+        self.seed = seed
+        super().__init__(**kwargs)
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update({
+            'low': self.low,
+            'high': self.high,
+            'shared': self.shared,
+            'seed': self.seed,
+        })
+        return config
+
+    def call(self, x):
+        """
+        Parameters:
+            x: Input tensor.
+        """
+        # Dimensions.
+        num_dim = len(x.shape) - 2
+        num_batch = tf.shape(x)[0]
+        num_chan = 1 if self.shared else tf.shape(x)[-1]
+        shape = (num_batch, *[1] * num_dim, num_chan)
+
+        gamma = tf.random.uniform(
+            shape,
+            minval=self.low,
+            maxval=self.high,
+            dtype=x.dtype,
+            seed=self.seed,
+        )
+        return tf.pow(x, gamma)
+
+
+class RandomIntensityLookup(Layer):
+    """Augment the contrast of a grayscale image using random intensity lookup tables.
+
+    At each invocation, this layer will synthesize a smoothly varying lookup table (LUT),
+    associating a new output intensity to each intensity value in the input image. We will apply
+    the LUT to the input image to synthesize a new image contrast. Each batch will undergo an
+    independent lookup.
+
+    If you find this layer useful, please cite:
+        Anatomy-specific acquisition-agnostic affine registration learned from fictitious images
+        M Hoffmann, A Hoopes, B Fischl*, AV Dalca* (*equal contribution)
+        SPIE Medical Imaging: Image Processing, 12464, p 1246402, 2023
+        https://doi.org/10.1117/12.2653251
+    """
+
+    def __init__(self,
+                 levels=256,
+                 blur_min=32,
+                 blur_max=64,
+                 seed=None,
+                 **kwargs):
+        """
+        Parameters:
+            levels: Number of grayscale levels to look up and re-assign.
+            blur_min: Lower bound on the smoothing SD for random-contrast lookup.
+            blur_max: Upper bound on the smoothing SD for random-contrast lookup.
+            seed: Integer for reproducible randomization.
+        """
+        self.levels = levels
+        self.blur_min = blur_min
+        self.blur_max = blur_max
+        self.seed = seed
+        super().__init__(**kwargs)
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update({
+            'levels': self.levels,
+            'blur_min': self.blur_min,
+            'blur_max': self.blur_max,
+            'seed': self.seed,
+        })
+        return config
+
+    def call(self, x):
+        """
+        Parameters:
+            x: Input image.
+        """
+        max_val = self.levels - 1
+        if not x.dtype.is_floating:
+            x = tf.cast(x, self.dtype)
+
+        # Oversample LUT. Convolution requires trailing singleton dimension.
+        num_draw = 5 * self.levels
+        lut = tf.random.uniform(
+            shape=(tf.shape(x)[0], num_draw, 1),
+            minval=0,
+            maxval=max_val,
+            dtype=x.dtype,
+            seed=self.seed,
+        )
+
+        # Smoothing. Filter shape: space, in, out.
+        kernel = utils.gaussian_kernel(
+            sigma=self.blur_max,
+            min_sigma=self.blur_min,
+            random=self.blur_min != self.blur_max,
+            dtype=x.dtype,
+            seed=self.seed,
+        )
+        kernel = tf.reshape(kernel, shape=(-1, 1, 1))
+        lut = tf.nn.convolution(lut, kernel, padding='SAME')[..., 0]
+
+        # Remove tapered edges from zero-padding.
+        keep = np.arange(self.levels) + (num_draw - self.levels) // 2
+        lut = tf.gather(lut, indices=keep, axis=1)
+
+        # Normalize batches independently.
+        space = range(1, len(x.shape) - 1)
+        x = max_val * utils.minmax_norm(x, axis=space)
+        lut = max_val * utils.minmax_norm(lut, axis=1)
+
+        # Lookup.
+        indices = tf.cast(x, tf.int32)
+        return tf.map_fn(
+            fn=lambda x: tf.gather(*x, axis=0),
+            elems=(lut, indices),
+            fn_output_signature=lut.dtype,
+        )
+
+
+class RandomClearLabel(Layer):
+    """Randomly clear image regions corresponding to specific labels.
+
+    If you find this layer useful, please cite:
+        Anatomy-specific acquisition-agnostic affine registration learned from fictitious images
+        M Hoffmann, A Hoopes, B Fischl*, AV Dalca* (*equal contribution)
+        SPIE Medical Imaging: Image Processing, 12464, p 1246402, 2023
+        https://doi.org/10.1117/12.2653251
+    """
+
+    def __init__(self,
+                 prob,
+                 clear=0,
+                 shared=False,
+                 seed=None,
+                 **kwargs):
+        """
+        Parameters:
+            prob: Probability that we clear image regions corresponding to the label.
+            shared: Synchronize the random clearing across all channels.
+            clear: Integer labels to clear, as a scalar or iterable. When passing several values,
+                the layer will combine and treat them as a single structure.
+            seed: Integer for reproducible randomization.
+        """
+        self.prob = prob
+        self.clear = clear
+        self.shared = shared
+        self.seed = seed
+        super().__init__(**kwargs)
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update({
+            'prob': self.prob,
+            'clear': self.clear,
+            'shared': self.shared,
+            'seed': self.seed,
+        })
+        return config
+
+    def call(self, inputs):
+        """
+        Parameters:
+            inputs: Input image and corresponding label map as an iterable.
+        """
+        image, labels = inputs
+        if self.prob == 0:
+            return image
+
+        # Labels to clear.
+        bg = [self.clear] if np.isscalar(self.clear) else np.unique(self.clear)
+        bg = tf.convert_to_tensor(bg, labels.dtype)
+
+        # Dimensions.
+        num_dim = len(image.shape) - 2
+        num_batch = tf.shape(image)[0]
+        num_chan = 1 if self.shared else tf.shape(image)[-1]
+        shape = (num_batch, *[1] * num_dim, num_chan)
+
+        # Randomization.
+        rand = tf.random.uniform(shape, dtype=self.dtype, seed=self.seed)
+        rand = tf.less(rand, self.prob)
+
+        # Mask.
+        mask = tf.reduce_any(tf.equal(labels[..., None], bg), axis=-1)
+        mask = tf.math.logical_and(mask, rand)
+        mask = tf.math.logical_xor(True, mask)
+
+        return image * tf.cast(mask, image.dtype)
+
+
+class DrawImage(Layer):
+    """ Generate an image from a label map by uniformly sampling a random intensity for each label.
+
+    This layer assumes that input label maps have a single channel and integer values in the
+    interval [0, N), where N corresponds to `max_label`. If you pass a list defining intensity
+    bounds, the (zero-based) i-th element of the list applies to label value i.
+
+    If you find this layer useful, please cite:
+        Anatomy-specific acquisition-agnostic affine registration learned from fictitious images
+        M Hoffmann, A Hoopes, B Fischl*, AV Dalca* (*equal contribution)
+        SPIE Medical Imaging: Image Processing, 12464, p 1246402, 2023
+        https://doi.org/10.1117/12.2653251
+    """
+
+    def __init__(self,
+                 max_label,
+                 low=0,
+                 high=1,
+                 channels=1,
+                 seed=None,
+                 **kwargs):
+        """
+        Parameters:
+            max_label: Highest integer value the input index label maps will ever take.
+            low: Lower bounds on the intensities drawn for each label, as a scalar or list.
+            high: Upper bounds on the intensities drawn for each label, as a scalar or list.
+            channels: Number of generated output channels.
+            seed: Integer for reproducible randomization.
+        """
+        self.max_label = max_label
+        self.channels = channels
+        self.low = low
+        self.high = high
+        self.seed = seed
+        super().__init__(**kwargs)
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update({
+            'max_label': self.max_label,
+            'channels': self.channels,
+            'low': self.low,
+            'high': self.high,
+            'seed': self.seed,
+        })
+        return config
+
+    def call(self, x):
+        """
+        Parameters:
+            x: Input label map with non-negative, zero-based index label values.
+        """
+        if x.dtype not in (tf.int32, tf.int64):
+            x = tf.cast(x, tf.int32)
+
+        num_dim = len(x.shape) - 2
+        num_batch = tf.shape(x)[0]
+        num_label = self.max_label + 1
+
+        # Random means.
+        means = tf.random.uniform(
+            shape=(num_batch, self.channels, num_label),
+            minval=self.low,
+            maxval=self.high,
+            dtype=self.dtype,
+            seed=self.seed,
+        )
+        means = tf.reshape(means, shape=(-1,))
+
+        # Label intensities.
+        offset_chan = tf.range(self.channels) * num_label
+        offset_batch = tf.range(num_batch) * self.channels * num_label
+        offset_batch = tf.reshape(offset_batch, shape=(-1, *[1] * num_dim, 1))
+        x += offset_batch + offset_chan
+        return tf.gather(means, indices=x)
+
+
 #########################################################
 # Sparse layers
 #########################################################
@@ -2489,7 +2791,7 @@ class PerlinNoise(tf.keras.layers.Layer):
         Parameters:
             x: Input tensor defining the batch size (and potentially shape).
         """
-        shape = tf.shape(x)[1:] if self.shape is None else self.shape
+        shape = x.shape[1:] if self.shape is None else self.shape
         dtype = self.out_type
         return tf.map_fn(lambda x: self._single_batch(x, shape), x, fn_output_signature=dtype)
 
