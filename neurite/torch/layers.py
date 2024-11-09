@@ -21,7 +21,10 @@ the License.
 """
 __all__ = [
     "Negate",
-    "RescaleValues"
+    "RescaleValues",
+    "Resize",
+    "SoftQuantize",
+    "MSE"
     ]
 
 import torch
@@ -67,3 +70,58 @@ class RescaleValues(nn.Module):
         """
         raise NotImplementedError("The `RescaleValues` module isn't ready yet :(")
 
+
+class Resize(nn.Module):
+    """
+    A PyTorch module that resizes the input tensor.
+    """
+    def __init__(self):
+        """
+        Initialize the `Resize` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `Resize` module.
+        """
+        raise NotImplementedError("The `Resize` module isn't ready yet :(")
+
+
+class SoftQuantize(nn.Module):
+    """
+    A PyTorch module that maps continuious values to discrete bins.
+
+    This module maps continuious values to discrete bins while retaining some smoothness/continuity
+    which is parametrized by a softening parameter.
+    """
+    def __init__(self):
+        """
+        Initialize the `SoftQuantize` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `SoftQuantize` module.
+        """
+        raise NotImplementedError("The `SoftQuantize` module isn't ready yet :(")
+
+
+# TODO: I disagree with putting this in neurite/torch/layers.py.
+# I would prefer making a loss module.
+class MSE(nn.Module):
+    """
+    A PyTorch module that calculates the mean squared error.
+    """
+    def __init__(self):
+        """
+        Initialize the `MSE` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `MSE` module.
+        """
+        raise NotImplementedError("The `MSE` module isn't ready yet :(")
