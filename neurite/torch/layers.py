@@ -24,7 +24,15 @@ __all__ = [
     "RescaleValues",
     "Resize",
     "SoftQuantize",
-    "MSE"
+    "MSE",
+    "GaussianBlur",
+    "Subsample",
+    "RandomCrop",
+    "RandomClip",
+    "RandomGamma",
+    "RandomIntensityLookup",
+    "RandomClearLabel",
+    "DrawImage"
     ]
 
 import torch
@@ -108,8 +116,7 @@ class SoftQuantize(nn.Module):
         raise NotImplementedError("The `SoftQuantize` module isn't ready yet :(")
 
 
-# TODO: I disagree with putting this in neurite/torch/layers.py.
-# I would prefer making a loss module.
+# TODO: I disagree with putting this in neurite/torch/layers.py. Can we move to a loss module?
 class MSE(nn.Module):
     """
     A PyTorch module that calculates the mean squared error.
@@ -125,3 +132,176 @@ class MSE(nn.Module):
         Performs the forward pass of the `MSE` module.
         """
         raise NotImplementedError("The `MSE` module isn't ready yet :(")
+
+
+# TODO: Move to an augmentation package/repo?
+class GaussianBlur(nn.Module):
+    """
+    A PyTorch module to blur a tensor by convolving it with a Gaussian kernel.
+    """
+    def __init__(self):
+        """
+        Initialize the `GaussianBlur` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `GaussianBlur` module.
+        """
+        raise NotImplementedError("The `GaussianBlur` module isn't ready yet :(")
+
+
+# TODO: Move to an augmentation package/repo?
+class Subsample(nn.Module):
+    """
+    A PyTorch module to subsample a tensor.
+
+    This module subsamples the input tensor by a factor `f` (stride) along one dimension using the
+    nearest-neighbor algorithm. Options exist to squsequently downsample the tensor to restore it's
+    original shape.
+    """
+    def __init__(self):
+        """
+        Initialize the `Subsample` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `Subsample` module.
+        """
+        # Negate the tensor and return it.
+        raise NotImplementedError("The `Subsample` module isn't ready yet :(")
+
+
+# TODO: Move to an augmentation package/repo?
+class RandomCrop(nn.Module):
+    """
+    A PyTorch module that randomly crops the input tensor to a particular field of view.
+
+    Randomly crop a tensor by multiplying with a spatially continuious binary mask (as opposed to
+    brenouli sampling).
+    """
+    def __init__(self):
+        """
+        Initialize the `RandomCrop` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `RandomCrop` module.
+        """
+        # Negate the tensor and return it.
+        raise NotImplementedError("The `RandomCrop` module isn't ready yet :(")
+
+
+# TODO: Move to an augmentation package/repo?
+class RandomClip(nn.Module):
+    """
+    A PyTorch module that randomly clips elements outside the bounds.
+
+    Randomly select elements within a tensor using Brenouli sampling, and clip values falling
+    outside the (exclusive) range [`clip_min`, `clip_max`].
+    """
+    def __init__(self):
+        """
+        Initialize the `RandomClip` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `RandomClip` module.
+        """
+        # Negate the tensor and return it.
+        raise NotImplementedError("The `RandomClip` module isn't ready yet :(")
+
+
+# TODO: Move to an augmentation package/repo?
+class RandomGamma(nn.Module):
+    """
+    A PyTorch module that applies a random gamma transformation to a tensor.
+
+    Applies a gamma (exponential) transformation to the elements of the input tensor by drawing the
+    exponentiation factor from a uniform distribution.
+    """
+    def __init__(self):
+        """
+        Initialize the `RandomGamma` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `RandomGamma` module.
+        """
+        # Negate the tensor and return it.
+        raise NotImplementedError("The `RandomGamma` module isn't ready yet :(")
+
+
+# TODO: Move to an augmentation package/repo?
+class RandomIntensityLookup(nn.Module):
+    """
+    A PyTorch module to augment the contrast of a single-channel tensor.
+
+    Compute a smoothly varying lookup table to map the original single-channel tensor (usually a
+    greyscale image) to a tensor with a new contrast.
+    """
+    def __init__(self):
+        """
+        Initialize the `RandomIntensityLookup` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `RandomIntensityLookup` module.
+        """
+        # Negate the tensor and return it.
+        raise NotImplementedError("The `RandomIntensityLookup` module isn't ready yet :(")
+
+
+# TODO: I suggest renaming this to BrenouliMasker
+# TODO: Move to an augmentation package/repo?
+class RandomClearLabel(nn.Module):
+    """
+    A PyTorch module that applies a Brenouli mask to the input tensor.
+
+    Compute a Brenouli mask from the shape of the input tensor and apply it to return a tensor whose
+    elements have been dropped out randomly.
+    """
+    def __init__(self):
+        """
+        Initialize the `RandomClearLabel` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `RandomClearLabel` module.
+        """
+        # Negate the tensor and return it.
+        raise NotImplementedError("The `RandomClearLabel` module isn't ready yet :(")
+
+
+# TODO: Rename something more intuitive like `LabelsToIntensity`?
+# TODO: Move to an augmentation package/repo?
+class DrawImage(nn.Module):
+    """
+    A PyTorch module that generates an image from a label map by uniformly sampling a random
+    intensity for each label.
+    """
+    def __init__(self):
+        """
+        Initialize the `DrawImage` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `DrawImage` module.
+        """
+        # Negate the tensor and return it.
+        raise NotImplementedError("The `DrawImage` module isn't ready yet :(")
