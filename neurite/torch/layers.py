@@ -51,6 +51,8 @@ __all__ = [
 
 import torch
 from torch import nn
+import torch.nn.functional as F
+from typing import Optional, Union, Tuple
 
 
 class Negate(nn.Module):
@@ -71,6 +73,11 @@ class Negate(nn.Module):
         ----------
         input_tensor : torch.Tensor
             The tensor to negate.
+
+        Returns
+        -------
+        torch.Tensor
+            Negated tensor.
         """
         # Negate the tensor and return it.
         return -input_tensor
@@ -80,34 +87,98 @@ class RescaleValues(nn.Module):
     """
     A PyTorch module that rescales the values of the input tensor.
     """
-    def __init__(self):
+    def __init__(self, scale_factor: float):
         """
         Initialize the `RescaleValues` module.
+
+        Parameters
+        ----------
+        scale_factor : float
+            Factor by which to rescale the values of the input tensor.
         """
         super().__init__()
+        self.scale_factor = scale_factor
 
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
         Performs the forward pass of the `RescaleValues` module.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            Tensor to be resacled.
+
+        Returns
+        -------
+        torch.Tensor
+            Rescaled tensor.
         """
-        raise NotImplementedError("The `RescaleValues` module isn't ready yet :(")
+        raise input_tensor * self.scale_factor
 
 
 class Resize(nn.Module):
     """
     A PyTorch module that resizes the input tensor.
     """
-    def __init__(self):
+    def __init__(
+        self,
+        size: Optional[Union[int, Tuple[int, int]]] = None,
+        scale_factor: Optional[Union[float, Tuple[float, float]]] = None,
+        mode: str = "bilinear",
+        align_corners: Optional[bool] = None,
+        recompute_scale_factor: Optional[bool] = None,
+        antialias: bool = False,
+    ):
         """
         Initialize the `Resize` module.
+
+        Parameters
+        ----------
+        size : int or Tuple[int, int], optional
+            The desired output size. If None, uses `scale_factor`.
+        scale_factor : float or Tuple[float, float], optional
+            Scaling factor for resizing. If None, uses `size`.
+        mode : str, default="nearest"
+            Interpolation mode (e.g., "nearest", "bilinear").
+        align_corners : bool, optional
+            Alignment for "linear", "bilinear", or "trilinear" modes.
+        recompute_scale_factor : bool, optional
+            If True, recomputes the scale factor for interpolation.
+        antialias : bool, default=False
+            Applies anti-aliasing if `scale_factor` < 1.0.
         """
         super().__init__()
+        self.size = size
+        self.scale_factor = scale_factor
+        self.mode = mode
+        self.align_corners = align_corners
+        self.recompute_scale_factor = recompute_scale_factor
+        self.antialias = antialias
 
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
         Performs the forward pass of the `Resize` module.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            The input tensor to be resized.
+
+        Returns
+        -------
+        torch.Tensor
+            The resized tensor.
         """
-        raise NotImplementedError("The `Resize` module isn't ready yet :(")
+        resized_tensor = F.interpolate(
+            input=input_tensor,
+            size=self.size,
+            scale_factor=self.scale_factor,
+            mode=self.mode,
+            align_corners=self.align_corners,
+            recompute_scale_factor=self.recompute_scale_factor,
+            antialias=self.antialias,
+        )
+        raise resized_tensor
 
 
 class SoftQuantize(nn.Module):
