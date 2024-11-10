@@ -32,7 +32,18 @@ __all__ = [
     "RandomGamma",
     "RandomIntensityLookup",
     "RandomClearLabel",
-    "DrawImage"
+    "DrawImage",
+    "SpatiallySparse_Dense",
+    "LocalBias",
+    "LocalLinear",
+    "LocallyConnected3D",
+    "LocalCrossLinear",
+    "LocalCrossLinearTrf",
+    "LocalParamLayer",
+    "LocalParamWithInput",
+    "MeanStream",
+    "CovStream",
+    "FFT"
     ]
 
 import torch
@@ -305,3 +316,224 @@ class DrawImage(nn.Module):
         """
         # Negate the tensor and return it.
         raise NotImplementedError("The `DrawImage` module isn't ready yet :(")
+
+
+# TODO: This is not how code should be modularized/encapsulated. This should go in another package.
+#########################################################
+# Sparse layers
+#########################################################
+
+
+class SpatiallySparse_Dense(nn.Module):
+    """
+    A Densely connected layer with sparse observations.
+    """
+    def __init__(self):
+        """
+        Initialize the `SpatiallySparse_Dense` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `SpatiallySparse_Dense` module.
+        """
+        # Negate the tensor and return it.
+        raise NotImplementedError("The `SpatiallySparse_Dense` module isn't ready yet :(")
+
+
+# TODO: Move to another package. Encapsulate code better.
+#########################################################
+# "Local" layers -- layers with parameters at each voxel
+#########################################################
+
+
+class LocalBias(nn.Module):
+    """
+    A PyTorch module that applies biases to tensor elements independently.
+    """
+    def __init__(self):
+        """
+        Initialize the `LocalBias` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `LocalBias` module.
+        """
+        # Negate the tensor and return it.
+        raise NotImplementedError("The `LocalBias` module isn't ready yet :(")
+
+
+# TODO: Make into AffineLayer and generalize to nD.
+class LocalLinear(nn.Module):
+    """
+    A PyTorch module that applies linear transformations to tensor elements independently.
+    """
+    def __init__(self):
+        """
+        Initialize the `LocalLinear` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `LocalLinear` module.
+        """
+        # Negate the tensor and return it.
+        raise NotImplementedError("The `LocalLinear` module isn't ready yet :(")
+
+
+class LocallyConnected3D(nn.Module):
+    """
+    A PyTorch module for unshared convolutions.
+
+    Notes
+    -----
+    - The `LocallyConnected3D` layer works similarly to the `Conv3D` layer, except that weights are
+    unshared, that is, a different set of filters is applied at each different patch of the input.
+    """
+    def __init__(self):
+        """
+        Initialize the `LocallyConnected3D` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `LocallyConnected3D` module.
+        """
+        # Negate the tensor and return it.
+        raise NotImplementedError("The `LocallyConnected3D` module isn't ready yet :(")
+
+
+class LocalCrossLinear(nn.Module):
+    """
+    A PyTorch module that ...
+    """
+    def __init__(self):
+        """
+        Initialize the `LocalCrossLinear` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `LocalCrossLinear` module.
+        """
+        raise NotImplementedError("The `LocalCrossLinear` module isn't ready yet :(")
+
+
+class LocalCrossLinearTrf(nn.Module):
+    """
+    A PyTorch module that ...
+    """
+    def __init__(self):
+        """
+        Initialize the `LocalCrossLinearTrf` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `LocalCrossLinearTrf` module.
+        """
+        raise NotImplementedError("The `LocalCrossLinearTrf` module isn't ready yet :(")
+
+
+class LocalParamLayer(nn.Module):
+    """
+    A PyTorch layer composed of a single unque parameter for each element in pixel/voxel space.
+
+    References
+    ----------
+    - https://github.com/YerevaNN/R-NET-in-Keras/blob/master/layers/SharedWeight.py
+    - https://github.com/keras-team/keras/blob/ee02d256611b17d11e37b86bd4f618d7f2a37d84/keras/
+    engine/input_layer.py
+    """
+    def __init__(self):
+        """
+        Initialize the `LocalParamLayer` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `LocalParamLayer` module.
+        """
+        raise NotImplementedError("The `LocalParamLayer` module isn't ready yet :(")
+
+
+class LocalParamWithInput(nn.Module):
+    """
+    A PyTorch module that ...
+    """
+    def __init__(self):
+        """
+        Initialize the `LocalParamWithInput` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `LocalParamWithInput` module.
+        """
+        raise NotImplementedError("The `LocalParamWithInput` module isn't ready yet :(")
+
+
+class MeanStream(nn.Module):
+    """
+    A PyTorch module that ...
+    """
+    def __init__(self):
+        """
+        Initialize the `MeanStream` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `MeanStream` module.
+        """
+        raise NotImplementedError("The `MeanStream` module isn't ready yet :(")
+
+
+class CovStream(nn.Module):
+    """
+    A PyTorch module that ...
+    """
+    def __init__(self):
+        """
+        Initialize the `CovStream` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `CovStream` module.
+        """
+        raise NotImplementedError("The `CovStream` module isn't ready yet :(")
+
+
+# TODO: Encapsulate better. Move to a different package.
+##########################################
+# FFT Layers
+##########################################
+
+
+class FFT(nn.Module):
+    """
+    A PyTorch module that applies the fast forier transform to a tensor.
+    """
+    def __init__(self):
+        """
+        Initialize the `FFT` module.
+        """
+        super().__init__()
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the forward pass of the `FFT` module.
+        """
+        raise NotImplementedError("The `FFT` module isn't ready yet :(")
