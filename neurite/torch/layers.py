@@ -1,12 +1,15 @@
 """
 Layers for the neurite project, written in PyTorch.
 
+Citation
+--------
 If you use this code, please cite the following, and read function docs for further info/citations
 Dalca AV, Guttag J, Sabuncu MR
 Anatomical Priors in Convolutional Networks for Unsupervised Biomedical Segmentation,
 CVPR 2018. https://arxiv.org/abs/1903.03148
 
-
+License
+-------
 Copyright 2020 Adrian V. Dalca
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in
