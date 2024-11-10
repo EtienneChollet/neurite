@@ -182,7 +182,6 @@ class Subsample(nn.Module):
         """
         Performs the forward pass of the `Subsample` module.
         """
-        # Negate the tensor and return it.
         raise NotImplementedError("The `Subsample` module isn't ready yet :(")
 
 
@@ -204,7 +203,6 @@ class RandomCrop(nn.Module):
         """
         Performs the forward pass of the `RandomCrop` module.
         """
-        # Negate the tensor and return it.
         raise NotImplementedError("The `RandomCrop` module isn't ready yet :(")
 
 
@@ -226,7 +224,6 @@ class RandomClip(nn.Module):
         """
         Performs the forward pass of the `RandomClip` module.
         """
-        # Negate the tensor and return it.
         raise NotImplementedError("The `RandomClip` module isn't ready yet :(")
 
 
@@ -248,7 +245,6 @@ class RandomGamma(nn.Module):
         """
         Performs the forward pass of the `RandomGamma` module.
         """
-        # Negate the tensor and return it.
         raise NotImplementedError("The `RandomGamma` module isn't ready yet :(")
 
 
@@ -270,7 +266,6 @@ class RandomIntensityLookup(nn.Module):
         """
         Performs the forward pass of the `RandomIntensityLookup` module.
         """
-        # Negate the tensor and return it.
         raise NotImplementedError("The `RandomIntensityLookup` module isn't ready yet :(")
 
 
@@ -293,7 +288,6 @@ class RandomClearLabel(nn.Module):
         """
         Performs the forward pass of the `RandomClearLabel` module.
         """
-        # Negate the tensor and return it.
         raise NotImplementedError("The `RandomClearLabel` module isn't ready yet :(")
 
 
@@ -314,7 +308,6 @@ class DrawImage(nn.Module):
         """
         Performs the forward pass of the `DrawImage` module.
         """
-        # Negate the tensor and return it.
         raise NotImplementedError("The `DrawImage` module isn't ready yet :(")
 
 
@@ -338,7 +331,6 @@ class SpatiallySparse_Dense(nn.Module):
         """
         Performs the forward pass of the `SpatiallySparse_Dense` module.
         """
-        # Negate the tensor and return it.
         raise NotImplementedError("The `SpatiallySparse_Dense` module isn't ready yet :(")
 
 
@@ -362,7 +354,6 @@ class LocalBias(nn.Module):
         """
         Performs the forward pass of the `LocalBias` module.
         """
-        # Negate the tensor and return it.
         raise NotImplementedError("The `LocalBias` module isn't ready yet :(")
 
 
@@ -381,7 +372,6 @@ class LocalLinear(nn.Module):
         """
         Performs the forward pass of the `LocalLinear` module.
         """
-        # Negate the tensor and return it.
         raise NotImplementedError("The `LocalLinear` module isn't ready yet :(")
 
 
@@ -404,7 +394,6 @@ class LocallyConnected3D(nn.Module):
         """
         Performs the forward pass of the `LocallyConnected3D` module.
         """
-        # Negate the tensor and return it.
         raise NotImplementedError("The `LocallyConnected3D` module isn't ready yet :(")
 
 
