@@ -49,10 +49,10 @@ __all__ = [
     "FFT"
     ]
 
+from typing import Optional, Union, Tuple
 import torch
 from torch import nn
 import torch.nn.functional as F
-from typing import Optional, Union, Tuple
 
 
 class Negate(nn.Module):
