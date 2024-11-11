@@ -63,6 +63,19 @@ def soft_quantize(
         Clip data higher than this value before calculating bin centers. By default float('inf')
     return_log : bool, optional
         Optionally return the log of the softly quantized tensor. By default False
+
+    Returns
+    -------
+    torch.Tensor
+        Softly quantized tensor with the same dimensions as `input_tensor`
+
+    Examples
+    --------
+    >>> # Make a random 3D tensor with zero mean and unit variance.
+    >>> input_tensor = torch.randn(1, 1, 32, 32, 32)
+    # Compute the softly quantized tensor with a low softness to approximate (and visualize) a
+    # pseudo-hard quantization. 
+    >>> softly_quantized_tensor = soft_quantize(input_tensor, nb_bins=4, softness=0.0001)
     """
     # Invert softness
     softness = 1 / softness
