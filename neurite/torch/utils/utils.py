@@ -23,7 +23,8 @@ implied. See the License for the specific language governing permissions and lim
 the License.
 """
 __all__ = [
-    'soft_quantize'
+    'soft_quantize',
+    'mse_loss'
 ]
 
 import torch
@@ -110,3 +111,33 @@ def soft_quantize(
     if return_log:
         softly_quantized.log_()
     return softly_quantized
+
+
+def mse_loss(input_tensor: torch.Tensor, target_tensor: torch.Tensor) -> torch.Tensor:
+    """
+    Calculates the mean squared error (MSE) between the predicted and target values.
+
+    Parameters
+    ----------
+    input_tensor : torch.Tensor
+        The tensor representing the model's prediction(s).
+    target_tensor : torch.Tensor
+        The target or ground truth values.
+
+    Returns
+    -------
+    torch.Tensor
+        The mean squared error between `input_tensor` and `target_tensor`.
+
+    Examples
+    --------
+    # Input tensor with zero mean, unit variance
+    >>> input_tensor = torch.randn((1, 16, 16, 16))
+    # Target tensor with zero mean, unit variance
+    >>> target_tensor = torch.randn((1, 16, 16, 16))
+    # Calculate loss
+    >>> loss = mse_loss(input_tensor, target_tensor)
+    # Print loss (should be approximately 2.0)
+    >>> print(loss)
+    """
+    return torch.mean((input_tensor - target_tensor) ** 2)
