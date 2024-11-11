@@ -53,6 +53,7 @@ from typing import Optional, Union, Tuple
 import torch
 from torch import nn
 import torch.nn.functional as F
+from . import utils
 
 
 class Negate(nn.Module):
@@ -183,22 +184,95 @@ class Resize(nn.Module):
 
 class SoftQuantize(nn.Module):
     """
-    A PyTorch module that maps continuious values to discrete bins.
+    A PyTorch module that maps continuous values to discrete bins.
 
-    This module maps continuious values to discrete bins while retaining some smoothness/continuity
-    which is parametrized by a softening parameter.
+    This module maps continuous values to discrete bins while retaining some smoothness/continuous
+    which is parametrized by a softening parameter. It is especially useful in the context of
+    machine learning, where it is desirable to have a differentiable version of a quantized
+    quantity, allowing for backprop. Hard quantization is non-differentiable and creates gradients
+    of zero, making gradient-based optimization impossible.
+
+    Parameters
+    ----------
+    nb_bins : int, optional
+        The number of discrete bins to softly quantize the input values into. By default 16
+    softness : float, optional
+        The softness factor for quantization. A higher value gives smoother quantization.
+        By default 1.0
+    min_clip : float, optional
+        Clip data lower than this value before calculating bin centers. By default -float('inf')
+    max_clip : float, optional
+        Clip data higher than this value before calculating bin centers. By default float('inf')
+    return_log : bool, optional
+        Optionally return the log of the softly quantized tensor. By default False
+
+    Examples
+    --------
+    >>> import torch
+    >>> import matplotlib.pyplot as plt
+    # Make a random 3D tensor with zero mean and unit variance.
+    >>> input_tensor = torch.randn(1, 1, 32, 32, 32)
+    # Initialize the SoftQuantize instance.
+    >>> soft_quantizer = SoftQuantize(nb_bins=4, softness=0.5)
+    # Apply the SoftQuantize instance to the input tensor
+    >>> softly_quantized_tensor = soft_quantizer(input_tensor)
+    # Visualize the softly quantized tensor.
+    >>> plt.imshow(softly_quantized_tensor[0, 0, 16])
     """
-    def __init__(self):
+    def __init__(
+        self,
+        nb_bins: int = 16,
+        softness: float = 1.0,
+        min_clip: float = -float('inf'),
+        max_clip: float = float('inf'),
+        return_log: bool = False
+    ):
         """
         Initialize the `SoftQuantize` module.
+
+        Parameters
+        ----------
+        nb_bins : int, optional
+            The number of discrete bins to softly quantize the input values into. By default 16
+        softness : float, optional
+            The softness factor for quantization. A higher value gives smoother quantization.
+            By default 1.0
+        min_clip : float, optional
+            Clip data lower than this value before calculating bin centers. By default -float('inf')
+        max_clip : float, optional
+            Clip data higher than this value before calculating bin centers. By default float('inf')
+        return_log : bool, optional
+            Optionally return the log of the softly quantized tensor. By default False
         """
         super().__init__()
+        self.nb_bins = nb_bins
+        self.softness = softness
+        self.min_clip = min_clip
+        self.max_clip = max_clip
+        self.return_log = return_log
 
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
         Performs the forward pass of the `SoftQuantize` module.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            Input tensor to softly quantize.
+
+        Returns
+        -------
+        torch.Tensor
+            Softly quantized tensor with the same dimensions as `input_tensor`.
         """
-        raise NotImplementedError("The `SoftQuantize` module isn't ready yet :(")
+        return utils.soft_quantize(
+            input_tensor=input_tensor,
+            nb_bins=self.nb_bins,
+            softness=self.softness,
+            min_clip=self.min_clip,
+            max_clip=self.max_clip,
+            return_log=self.return_log
+        )
 
 
 # TODO: I disagree with putting this in neurite/torch/layers.py. Can we move to a loss module?
