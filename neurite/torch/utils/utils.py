@@ -75,11 +75,11 @@ def soft_quantize(
     >>> import matplotlib.pyplot as plt
     # Make a random 3D tensor with zero mean and unit variance.
     >>> input_tensor = torch.randn(1, 1, 32, 32, 32)
-    # Compute the softly quantized tensor with a low softness to approximate (and visualize) a 
-    # pseudo-hard quantization. 
-    >>> softly_quantized_tensor = soft_quantize(input_tensor, nb_bins=4, softness=0.0001)
+    # Compute the softly quantized tensor with a low softness to approximate (and visualize) a
+    # pseudo-hard quantization.
+    >>> softly_quantized_tensor = soft_quantize(input_tensor, nb_bins=4, softness=0.5)
     # Visualize the softly quantized tensor.
-    >>> plt.imshow(x[0, 0, 16])
+    >>> plt.imshow(softly_quantized_tensor[0, 0, 16])
     """
     # Invert softness
     softness = 1 / softness
