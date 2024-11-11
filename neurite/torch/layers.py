@@ -286,11 +286,23 @@ class MSE(nn.Module):
         """
         super().__init__()
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+    def forward(self, input_tensor: torch.Tensor, target_tensor: torch.Tensor) -> torch.Tensor:
         """
         Performs the forward pass of the `MSE` module.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            The tensor representing the model's prediction(s).
+        target_tensor : torch.Tensor
+            The target or ground truth values.
+
+        Returns
+        -------
+        torch.Tensor
+            The mean squared error between `input_tensor` and `target_tensor`.
         """
-        raise NotImplementedError("The `MSE` module isn't ready yet :(")
+        return utils.mse_loss(input_tensor=input_tensor, target_tensor=target_tensor)
 
 
 # TODO: Move to an augmentation package/repo?
