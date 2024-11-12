@@ -131,6 +131,7 @@ def mse_loss(input_tensor: torch.Tensor, target_tensor: torch.Tensor) -> torch.T
 
     Examples
     --------
+    >>> import torch
     # Input tensor with zero mean, unit variance
     >>> input_tensor = torch.randn((1, 16, 16, 16))
     # Target tensor with zero mean, unit variance
