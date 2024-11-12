@@ -286,7 +286,7 @@ def sample_bernoulli_distribution(p: float = 0.5, shape: tuple = (1,)):
     return bernoulli_result
 
 
-def apply_bernoulli_mask(input_tensor: torch.Tensor, p: float = 0.5):
+def apply_bernoulli_mask(input_tensor, p: float = 0.5, returns: str = None):
     """
     Apply a Bernoulli mask to a tensor.
 
@@ -303,6 +303,12 @@ def apply_bernoulli_mask(input_tensor: torch.Tensor, p: float = 0.5):
         Probability of realizing a success (i.e., the probability of a 1) in the mask. Successes are
         preserved in the input tensor such that higher values of this parameter correspond to more
         elements of the input tensor being preserved. By default 0.5. Must be in the range [0, 1].
+    returns : str, {None, 'successes', 'failures'}
+        Optionally return the subset of the input tensor corresponding to Bernoulli {'successes',
+        'failures'}. By default None (returns the original tensor with failures set to zero)
+        - Setting `returns = 'successes'` might be useful in sampling a subset of a large tensor to
+        estimate the statistics of it. Such operations such as `torch.quantile()` are especially
+        unfriendly to a large sample size.
 
     Returns
     -------
@@ -312,17 +318,39 @@ def apply_bernoulli_mask(input_tensor: torch.Tensor, p: float = 0.5):
 
     Examples
     --------
+    ## Standard use case
     >>> # Define input tensor. (Filled with ones for demonstration purposes)
     >>> input_tensor = torch.ones((1, 32, 32, 32))
-    >>> # Mask the tensor. 
+    >>> # Mask the tensor.
     >>> masked_tensor = apply_bernoulli_mask(input_tensor, p=0.9)
     >>> # Return the average value of the tensor of ones, approximating the expectation of the mask
     >>> # in this special case.
     >>> masked_tensor.mean()
 
+    ## Returning successes only (as a flattened tensor representing elements from successful trials)
+    >>> Define input tensor. (Filled with ones for demonstration purposes)
+    >>> input_tensor = torch.ones((1, 32, 32, 32))
+    >>> # Get masked tensor
+    >>> masked_tensor = apply_bernoulli_mask(input_tensor, p=0.9, returns='successes')
+    >>> # Compute original shape and masked shape
+    >>> original_shape, masked_shape = input_tensor.flatten().shape[0], masked_tensor.shape[0]
+    >>> # Compute difference in size as a percent. Should be ~= `p`
+    >>> print((masked_shape/original_shape))
     """
     # Sample the Bernoulli mask with parameter `p`
     bernoulli_mask = sample_bernoulli_distribution(p=p, shape=input_tensor.shape)
-    # Mask or "drop out" elements in the input tensor corresponding to Bernoulli failures.
-    input_tensor[bernoulli_mask == 0] = 0
-    return input_tensor
+    # Clone the input tensor for future computations
+    masked = torch.clone(input_tensor)
+
+    if returns == 'successes':
+        # Get all elements from `input_tensor` corresponding to Bernoulli failures.
+        masked = masked[bernoulli_mask == 1]
+    elif returns == 'failures':
+        # Get all elements from `input_tensor` corresponding to Bernoulli failures.
+        masked = masked[bernoulli_mask == 0]
+    elif returns is None:
+        # Drop out (zero) all bernoulli failures.
+        masked[bernoulli_mask == 0] = 0
+    else:
+        raise ValueError(f"{returns} isn't supported!")
+    return masked
