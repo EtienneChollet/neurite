@@ -24,7 +24,8 @@ the License.
 """
 __all__ = [
     'soft_quantize',
-    'mse_loss'
+    'mse_loss',
+    'create_gaussian_kernel'
 ]
 
 import torch
@@ -142,3 +143,45 @@ def mse_loss(input_tensor: torch.Tensor, target_tensor: torch.Tensor) -> torch.T
     >>> print(loss)
     """
     return torch.mean((input_tensor - target_tensor) ** 2)
+
+
+def create_gaussian_kernel(kernel_size: int = 3, sigma: float = 1, ndim: int = 3):
+    """
+    Create a {1D, 2D, 3D} Gaussian kernel.
+
+    Parameters
+    ----------
+    kernel_size : int
+        Size of Gaussian kernel. Default is 3.
+    sigma : float
+        Standard deviation of the Gaussian kernel. Default is 1.
+    ndim : int
+        Dimensionality of the gaussian kernel. Default is 3.
+
+    Returns
+    -------
+    torch.Tensor
+        Tensor representing the {1D, 2D, 3D} Gaussian kernel with batch and channel dimensions.
+
+    Examples
+    --------
+    >>> import torch
+    # Make the kernel!
+    >>> gaussian_kernel = create_gaussian_kernel(3, 1, 3)
+    # Print shape (should have batch and channel dimensions)
+    >>> gaussian_kernel.shape()
+    torch.Size([1, 1, 3, 3, 3])
+    """
+    # Create a coordinate grid centered at zero
+    coords = torch.arange(kernel_size).float() - (kernel_size - 1) / 2
+    grid = torch.stack(torch.meshgrid([coords] * ndim), -1)
+
+    # Calculate the Gaussian function
+    kernel = torch.exp(-((grid ** 2).sum(-1) / (2 * sigma ** 2)))
+
+    # Normalize the kernel so that the sum of all elements is 1
+    kernel = kernel / kernel.sum()
+
+    # Reshape to 5D tensor for conv3d
+    kernel = kernel.view(1, 1, *([kernel_size] * ndim))
+    return kernel
