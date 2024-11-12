@@ -308,19 +308,42 @@ class MSE(nn.Module):
 # TODO: Move to an augmentation package/repo?
 class GaussianBlur(nn.Module):
     """
-    A PyTorch module to blur a tensor by convolving it with a Gaussian kernel.
+    A PyTorch module to blur a {1D, 2D, 3D} tensor by convolving it with a Gaussian kernel.
     """
-    def __init__(self):
+    def __init__(self, kernel_size: int = 3, sigma: float = 1):
         """
         Initialize the `GaussianBlur` module.
+
+        Parameters
+        ----------
+        kernel_size : int, optional
+            Size of the Gaussian kernel, default is 3.
+        sigma : float, optional
+            Standard deviation of the Gaussian kernel, default is 1.
         """
         super().__init__()
+        self.kernel_size = kernel_size
+        self.sigma = sigma
 
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
         Performs the forward pass of the `GaussianBlur` module.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            The input tensor, assumed to be 1D, 2D, or 3D.
+
+        Returns
+        -------
+        torch.Tensor
+            The smoothed tensor.
         """
-        raise NotImplementedError("The `GaussianBlur` module isn't ready yet :(")
+        utils.gaussian_smoothing(
+            input_tensor=input_tensor,
+            kernel_size=self.kernel_size,
+            sigma=self.sigma
+        )
 
 
 # TODO: Move to an augmentation package/repo?
