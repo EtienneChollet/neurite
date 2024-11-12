@@ -28,6 +28,7 @@ __all__ = [
     'create_gaussian_kernel',
     'gaussian_smoothing',
     'sample_bernoulli_distribution',
+    'apply_bernoulli_mask',
 ]
 
 import torch
@@ -283,3 +284,45 @@ def sample_bernoulli_distribution(p: float = 0.5, shape: tuple = (1,)):
     # Sample from the bernoulli distribution
     bernoulli_result = torch.bernoulli(sampling_domain)
     return bernoulli_result
+
+
+def apply_bernoulli_mask(input_tensor: torch.Tensor, p: float = 0.5):
+    """
+    Apply a Bernoulli mask to a tensor.
+
+    This function samples a Bernoulli mask with the parameter `p`, representing the probability of
+    success (e.g. realizing a 1) and applies it to `input_tensor` by element-wise multiplcation. The
+    The elements of `input_tensor` corresponding to successes in the mask are preserved, while
+    failures (e.g. zeros) are set to zero.
+
+    Parameters
+    ----------
+    input_tensor : torch.Tensor
+        The input tensor to be masked.
+    p : float, optional
+        Probability of realizing a success (i.e., the probability of a 1) in the mask. Successes are
+        preserved in the input tensor such that higher values of this parameter correspond to more
+        elements of the input tensor being preserved. By default 0.5. Must be in the range [0, 1].
+
+    Returns
+    -------
+    torch.Tensor
+        Masked tensor with approximately `p` * 100% elements preserved (or 1 - (`p` * 100%))
+        elements dropped out.
+
+    Examples
+    --------
+    >>> # Define input tensor. (Filled with ones for demonstration purposes)
+    >>> input_tensor = torch.ones((1, 32, 32, 32))
+    >>> # Mask the tensor. 
+    >>> masked_tensor = apply_bernoulli_mask(input_tensor, p=0.9)
+    >>> # Return the average value of the tensor of ones, approximating the expectation of the mask
+    >>> # in this special case.
+    >>> masked_tensor.mean()
+
+    """
+    # Sample the Bernoulli mask with parameter `p`
+    bernoulli_mask = sample_bernoulli_distribution(p=p, shape=input_tensor.shape)
+    # Mask or "drop out" elements in the input tensor corresponding to Bernoulli failures.
+    input_tensor[bernoulli_mask == 0] = 0
+    return input_tensor
