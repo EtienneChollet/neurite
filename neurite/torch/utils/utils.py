@@ -185,3 +185,64 @@ def create_gaussian_kernel(kernel_size: int = 3, sigma: float = 1, ndim: int = 3
     # Reshape to 5D tensor for conv3d
     kernel = kernel.view(1, 1, *([kernel_size] * ndim))
     return kernel
+
+
+def gaussian_smoothing(
+    input_tensor: torch.Tensor,
+    kernel_size: int = 3,
+    sigma: float = 1,
+) -> torch.Tensor:
+    """
+    Applies Gaussian smoothing to the {1D, 2D, 3D} input tensor based on the given kernel size and
+    sigma.
+
+    Parameters
+    ----------
+    input_tensor : torch.Tensor
+        The input tensor, assumed to be 1D, 2D, or 3D.
+    kernel_size : int, optional
+        Size of the Gaussian kernel, default is 3.
+    sigma : float, optional
+        Standard deviation of the Gaussian kernel, default is 1.
+
+    Returns
+    -------
+    smoothed_tensor : torch.Tensor
+        The smoothed tensor.
+
+    Examples
+    --------
+    >>> import torch
+    # Make a random input tensor
+    >>> input_tensor = torch.rand(1, 1, 16, 16, 16)
+    # Smooth it
+    >>> smoothed_tensor = gaussian_smoothing(input_tensor)
+    """
+    # Infer dimensionality in voxel/pixel space. Squeeze to remove batch and/or channel dims.
+    ndim = input_tensor.squeeze().dim()
+
+    # Initialize the gaussian kernel
+    gaussian_kernel = create_gaussian_kernel(
+        kernel_size=kernel_size,
+        sigma=sigma,
+        ndim=ndim
+    )
+
+    # Calculate padding size
+    padding = kernel_size // 2
+    # Make the padding symmetric and 
+    padding = torch.tensor(padding).repeat(ndim * 2)
+    # Convert to tuple (F.pad takes a tuple of ints, not tensors)
+    padding = tuple(padding.tolist())
+    # Pad `input_tensor`
+    padded_input_tensor = F.pad(input_tensor, padding, mode='reflect')
+
+    # Make dictionary for the different convolution dimensionalities
+    conv_fn = {1: F.conv1d, 2: F.conv2d, 3: F.conv3d}[ndim]
+    # Apply the smoothig operation
+    smoothed_tensor = conv_fn(
+        input=padded_input_tensor,
+        weight=gaussian_kernel,
+        padding=0,
+    )
+    return smoothed_tensor
