@@ -38,7 +38,7 @@ def soft_quantize(
     min_clip: float = -float('inf'),
     max_clip: float = float('inf'),
     return_log: bool = False
-):
+) -> torch.Tensor:
     """
     This function softly maps continuous values to discrete bins while retaining smoothness,
     controlled by the `softness` parameter.
