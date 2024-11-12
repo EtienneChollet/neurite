@@ -25,7 +25,8 @@ the License.
 __all__ = [
     'soft_quantize',
     'mse_loss',
-    'create_gaussian_kernel'
+    'create_gaussian_kernel',
+    'gaussian_smoothing'
 ]
 
 import torch
