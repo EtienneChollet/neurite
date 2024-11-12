@@ -26,7 +26,8 @@ __all__ = [
     'soft_quantize',
     'mse_loss',
     'create_gaussian_kernel',
-    'gaussian_smoothing'
+    'gaussian_smoothing',
+    'sample_bernoulli_distribution',
 ]
 
 import torch
@@ -247,3 +248,38 @@ def gaussian_smoothing(
         padding=0,
     )
     return smoothed_tensor
+
+
+def sample_bernoulli_distribution(p: float = 0.5, shape: tuple = (1,)):
+    """
+    Sample from a Bernoulli distribution with a specified probability and shape.
+
+    Parameters
+    ----------
+    p : float, optional
+        Probability of realizing a success (i.e., the probability of a 1) from the Bernoulli
+        distribution. By default, 0.5. Must be in the range [0, 1].
+    shape : tuple, optional
+        Shape of the output tensor, specifying the number of independent Bernoulli trials. Each
+        entry represents the dimensions of the resulting tensor. By default, (1).
+
+    Returns
+    -------
+    bernoulli_result: torch.Tensor
+        A tensor of Bernoulli-distributed random samples with values of 0 or 1, representing results
+        of independent Bernoulli trials.
+
+    Examples
+    --------
+    >>> # Generate samples from the Bernoulli distribution
+    >>> samples = sample_bernoulli(p=0.25, shape=(1, 32, 32, 32))
+    >>> # Mean (expectation) should be ~=`p`
+    >>> print(samples.mean())
+    tensor(0.2471)
+    """
+    # Make sampling domain.
+    # Each element in this tensor represents the probability of realizing a 1.
+    sampling_domain = torch.tensor(p).repeat(shape)
+    # Sample from the bernoulli distribution
+    bernoulli_result = torch.bernoulli(sampling_domain)
+    return bernoulli_result
