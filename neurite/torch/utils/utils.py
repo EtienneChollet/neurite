@@ -29,6 +29,7 @@ __all__ = [
     'gaussian_smoothing',
     'sample_bernoulli_distribution',
     'apply_bernoulli_mask',
+    'subsample_tensor'
 ]
 
 import torch
@@ -354,3 +355,68 @@ def apply_bernoulli_mask(input_tensor, p: float = 0.5, returns: str = None):
     else:
         raise ValueError(f"{returns} isn't supported!")
     return masked
+
+
+def subsample_tensor(
+        input_tensor: torch.Tensor,
+        subsampling_dimension: int = 0,
+        stride: int = 2
+):
+    """
+    Subsamples `input_tensor` by a factor `stride` along the specified dimension.
+
+    The `subsample_tensor()` function provides a convenient way to downsample a specified dimension
+    of a PyTorch tensor by a given stride. This type of downsampling is achieved by interleaving
+    dropouts, meaning that every `stride`-th element along the selected dimension is kept, while the
+    others are discarded. This operation can be applied to tensors of any dimensionality, making it
+    versatile for a variety of tensor structures.
+
+    Parameters
+    ----------
+    input_tensor : torch.Tensor
+        The tensor to sample from.
+    subsampling_dimension : int, optional
+        The dimension (or axis) along which the subsampling will occur. By default 0.
+    stride : int, optional
+        Factor by which to subsample (interleave dropouts). By default 2.
+
+    Returns
+    -------
+    subsampled_tensor : torch.Tensor
+        Tensor that has been subsampled.
+
+    Examples
+    --------
+    >>> import torch
+    # Defining two dimensional input tensor of shape (5, 5)
+    >>> input_tensor = torch.arange(25).view(5, 5)
+    # Visualize the tensor
+    >>> print(input_tensor)
+    tensor([[ 0,  1,  2,  3,  4],
+            [ 5,  6,  7,  8,  9],
+            [10, 11, 12, 13, 14],
+            [15, 16, 17, 18, 19],
+            [20, 21, 22, 23, 24]])
+    # Lets subsample along the first dimension (the columns)
+    >>> subsampled_tensor = subsample_tensor(input_tensor, subsampling_dimension=1)
+    # With the default stride (of 2), every other column should have been dropped out.
+    >>> print(subsampled_tensor)
+    tensor([[ 0,  2,  4],
+            [ 5,  7,  9],
+            [10, 12, 14],
+            [15, 17, 19],
+            [20, 22, 24]])
+    # We could, of course, keep the default `subsampling_dimension=0` and subsample the rows:
+    >>> subsampled_tensor = subsample_tensor(input_tensor, subsampling_dimension=1)
+    >>> print(subsampled_tensor)
+    tensor([[ 0,  1,  2,  3,  4],
+            [10, 11, 12, 13, 14],
+            [20, 21, 22, 23, 24]])
+    """
+    # Make a list of slices that we will modify individually.
+    slices = [slice(None)] * input_tensor.ndim
+    # Slice the `axis` dimension with a given step size. Keep everything else the same.
+    slices[subsampling_dimension] = slice(None, None, stride)
+    # Slice the `input_tensor` with all slices to make the subsampled tensor.
+    subsampled_tensor = input_tensor[tuple(slices)]
+    return subsampled_tensor
