@@ -420,3 +420,96 @@ def subsample_tensor(
     # Slice the `input_tensor` with all slices to make the subsampled tensor.
     subsampled_tensor = input_tensor[tuple(slices)]
     return subsampled_tensor
+
+
+def subsample_tensor_random_dims(
+    input_tensor: torch.Tensor,
+    stride: int = 2,
+    forbidden_dims: list = None,
+    p: float = 0.5,
+    max_concurrent_subsamplings: int = None
+):
+    """
+    Subsamples the input tensor along randomly selected dimensions, with constraints
+    on which dimensions to subsample (`forbidden_dims`), the stride, and the probability of
+    subsampling.
+
+    Parameters
+    ----------
+    input_tensor : torch.Tensor
+        The input tensor to be subsampled.
+    stride : int, optional
+        The stride value to use when subsampling each selected dimension. 
+        By default, this is set to 2.
+    forbidden_dims : list, optional
+        A list of dimensions that should not be subsampled. If None, no dimensions
+        are forbidden from subsampling. Default is None.
+    p : float, optional
+        The probability of selecting each dimension for subsampling. This probability 
+        is applied as an independent Bernoulli trial for each dimension. By default, 0.5.
+    max_concurrent_subsamplings : int, optional
+        The maximum number of dimensions that can be subsampled simultaneously. If
+        None, the number of concurrent subsamplings is set to the number of dimensions
+        in `input_tensor`. Default is None.
+
+    Returns
+    -------
+    torch.Tensor
+        The subsampled tensor after applying the specified dimensional subsampling.
+
+    Examples
+    --------
+    >>> import torch
+    # Defining two dimensional input tensor of shape (5, 5)
+    >>> input_tensor = torch.arange(25).view(5, 5)
+    # Visualize the tensor
+    >>> print(input_tensor)
+    tensor([[ 0,  1,  2,  3,  4],
+            [ 5,  6,  7,  8,  9],
+            [10, 11, 12, 13, 14],
+            [15, 16, 17, 18, 19],
+            [20, 21, 22, 23, 24]])
+    # Subsample the tensor. This may now (randomly) subsample more than one dimension.
+    >>> subsampled_tensor = subsample_tensor_random_dims(input_tensor)
+    >>> print(subsampled_tensor)
+    tensor([[ 0,  2,  4],
+            [10, 12, 14],
+            [20, 22, 24]])
+    """
+    # Determine how many dimensions should be subsampled at once
+    if max_concurrent_subsamplings is None:
+        # If none we will subsample, at most, all of them at once!
+        max_concurrent_subsamplings = input_tensor.dim()
+    elif max_concurrent_subsamplings <= input_tensor.dim():
+        # Great. It's already defined :)
+        pass
+    elif max_concurrent_subsamplings > input_tensor.dim():
+        raise ValueError(
+            f"Your tensor doesn't have {max_concurrent_subsamplings} dimensions!"
+            )
+
+    # Randomly sample the dimensions to subsample by randomly permuting the list of allowed
+    # dimensions and taking the first `max_concurrent_subsamplings`
+    valid_dimensions_to_subsample = torch.randperm(
+        input_tensor.dim()
+    )[:max_concurrent_subsamplings]
+    # Randomly sample which dimensions to subsample via iid bernoulli trials.
+    dimensions_to_subsample = apply_bernoulli_mask(
+        input_tensor=valid_dimensions_to_subsample,
+        p=p,
+        returns='successes'
+    )
+    # Remove all forbidden dimensions (dimensions that should not be subsampled)
+    if forbidden_dims is not None:
+        dimensions_to_subsample = [
+            dim for dim in dimensions_to_subsample if dim not in forbidden_dims
+        ]
+    # Perform the subsampling.
+    for dimension in dimensions_to_subsample:
+        input_tensor = subsample_tensor(
+            input_tensor,
+            subsampling_dimension=dimension,
+            stride=stride
+        )
+
+    return input_tensor
