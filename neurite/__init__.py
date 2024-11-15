@@ -34,7 +34,6 @@ from .py import dataproc
 
 # import backend-dependent submodules
 backend = py.utils.get_backend()
-backend = 'pytorch'
 
 if backend == 'pytorch':
     # the pytorch backend can be enabled by setting the NEURITE_BACKEND
