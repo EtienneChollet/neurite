@@ -29,7 +29,8 @@ __all__ = [
     'gaussian_smoothing',
     'sample_bernoulli_distribution',
     'apply_bernoulli_mask',
-    'subsample_tensor'
+    'subsample_tensor',
+    'uniform'
 ]
 
 import torch
@@ -439,7 +440,7 @@ def subsample_tensor_random_dims(
     input_tensor : torch.Tensor
         The input tensor to be subsampled.
     stride : int, optional
-        The stride value to use when subsampling each selected dimension. 
+        The stride value to use when subsampling each selected dimension.
         By default, this is set to 2.
     forbidden_dims : list, optional
         A list of dimensions that should not be subsampled. If None, no dimensions
@@ -513,3 +514,64 @@ def subsample_tensor_random_dims(
         )
 
     return input_tensor
+
+
+def uniform(*args, **kwargs) -> torch.Tensor:
+    """
+    Sample from a continuous uniform distribution on an exclusive range. If only one value is
+    provided, it's interpreted as `max`.
+
+    Parameters
+    ----------
+    min : float, optional
+        Lower bound of the range if provided as a keyword argument. Default is 0.
+    max : float, optional
+        Upper bound of the range if provided as a keyword argument. Default is 1.
+    shape : tuple, optional
+        Shape of the output sample. Default is (1,)
+
+    Returns
+    -------
+    torch.Tensor
+        A tensor containing a single sample from the specified uniform distribution.
+
+    Examples
+    --------
+    >>> # Sample the uniform distribution by defining the maximum value
+    >>> uniform(4)
+    tensor([3.8468])
+    >>> # Sample by defining min and max bounds
+    >>> uniform(-3, -2)
+    tensor([-2.3329])
+    >>> # Sample with a defined output shape
+    >>> uniform(10, 20, (2, 2))
+    tensor([[11.9030, 14.2310],
+            [15.6445, 16.0478]])
+    """
+    min, max, shape = 0, 1, (1,)
+
+    # Handle arguments according to shape (important for allowing single input arg to be `max`)
+    if len(args) == 3:
+        min, max, shape = args
+    elif len(args) == 2:
+        min, max = args
+    elif len(args) == 1:
+        # if only one input arg is defined, interpret it as `max`
+        min, max = 0.0, args[0]
+    else:
+        raise ValueError(
+            "Please provide either one argument (to define `max`) or two arguments (to define "
+            "`min` and `max` respectively)."
+            )
+    # Handle kwargs
+    if 'min' in kwargs:
+        min = kwargs['min']
+    if 'max' in kwargs:
+        max = kwargs['max']
+    if 'shape' in kwargs:
+        shape = kwargs['shape']
+
+    if max <= min:
+        raise ValueError("`max` must be greater than `min`.")
+
+    return torch.rand(shape).mul(max - min).add(min)
