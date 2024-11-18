@@ -46,7 +46,8 @@ __all__ = [
     "LocalParamWithInput",
     "MeanStream",
     "CovStream",
-    "FFT"
+    "FFT",
+    "Uniform"
     ]
 
 from typing import Optional, Union, Tuple
@@ -709,3 +710,60 @@ class FFT(nn.Module):
         Performs the forward pass of the `FFT` module.
         """
         raise NotImplementedError("The `FFT` module isn't ready yet :(")
+
+
+class Uniform:
+    """
+    Sample from a continuious uniform distribution.
+
+    This class samples from a continuous uniform distribution on an exclusive range. If only one
+    value is passed to the constructor, it's interpreted as `max`.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        min : float, optional
+            Lower bound of the range if provided as a keyword argument. Default is 0.
+        max : float, optional
+            Upper bound of the range if provided as a keyword argument. Default is 1.
+
+        Examples
+        --------
+        >>> Uniform()()
+        tensor([0.4648])
+        >>> Uniform(min=-3, max=-2)()
+        tensor([-2.3329])
+        >>> Uniform(10, 20)((2, 2))
+        tensor([[11.9030, 14.2310],
+                [15.6445, 16.0478]])
+        """
+        min, max = 0, 1
+        if len(args) == 2:
+            min, max = args
+        elif len(args) == 1:
+            min, max = 0.0, args[0]
+        if 'min' in kwargs:
+            min = kwargs['min']
+        if 'max' in kwargs:
+            max = kwargs['max']
+
+        self.min = min
+        self.max = max
+
+    def __call__(self, shape: int = (1,)):
+        """
+        Forward call of the `Uniform` sampler.
+
+        Parameters
+        ----------
+        shape : tuple, optional
+            Shape of the output sample. Default is (1,)
+
+        Returns
+        -------
+        torch.Tensor
+            Results of the uniform sampling.
+        """
+        return utils.uniform(self.min, self.max, shape)
