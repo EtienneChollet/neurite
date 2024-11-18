@@ -47,7 +47,8 @@ __all__ = [
     "MeanStream",
     "CovStream",
     "FFT",
-    "Uniform"
+    "Uniform",
+    "Bernoulli"
     ]
 
 from typing import Optional, Union, Tuple
@@ -767,3 +768,52 @@ class Uniform:
             Results of the uniform sampling.
         """
         return utils.uniform(self.min, self.max, shape)
+
+
+class Bernoulli:
+    """
+    Sample from a Bernoulli distribution.
+
+    This class samples from a Bernoulli distribution with a specified probability `p` and shape.
+    """
+
+    def __init__(self, p: float = 0.5):
+        """
+        Initialize the Bernoulli sampler.
+
+        Parameters
+        ----------
+        p : float, optional
+            Probability of realizing a success (i.e., the probability of a 1) from the Bernoulli
+            distribution. By default, 0.5. Must be in the range [0, 1].
+
+        Examples
+        --------
+        >>> samples = Bernoulli()(shape=500)
+        >>> # Mean (expectation) should be around 0.5
+        >>> print(samples.mean())
+        tensor(0.4809)
+        >>> samples = Bernoulli(0.33)((2, 3))
+        >>> print(samples)
+        tensor([[1., 0., 1.],
+                [0., 0., 0.]])
+        """
+        self.p = p
+
+    def __call__(self, shape: int = (1,)):
+        """
+        Forward call of the `Bernoulli` sampler.
+
+        Parameters
+        ----------
+        shape : tuple, optional
+            Shape of the output tensor, specifying the number of independent Bernoulli trials. Each
+            entry represents the dimensions of the resulting tensor. By default, (1,).
+
+        Returns
+        -------
+        torch.Tensor
+            A tensor of Bernoulli-distributed random samples with values of 0 or 1, representing
+            results of independent Bernoulli trials.
+        """
+        return utils.bernoulli(self.p, shape)
