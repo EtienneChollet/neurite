@@ -17,11 +17,8 @@ __version__ = '0.2'
 # check whether pystrum version is valid
 from packaging import version
 import pystrum
-import warnings
-
 minv = '0.2'
 curv = getattr(pystrum, '__version__', None)
-
 if curv is None or version.parse(curv) < version.parse(minv):
     raise ImportError(f'neurite requires pystrum version {minv} or greater, '
                       f'but found version {curv}')
@@ -34,7 +31,6 @@ from .py import dataproc
 
 # import backend-dependent submodules
 backend = py.utils.get_backend()
-
 if backend == 'pytorch':
     # the pytorch backend can be enabled by setting the NEURITE_BACKEND
     # environment var to "pytorch"
@@ -42,16 +38,9 @@ if backend == 'pytorch':
         import torch
     except ImportError:
         raise ImportError('Please install pytorch to use this neurite backend')
+
     from . import torch
 else:
-    warnings.warn(
-        "The TensorFlow backend is deprecated and will soon be unsupported. We encourage you to "
-        "migrate to the PyTorch backend, which will receive full support and ongoing maintenance. "
-        "For migration instructions, please visit "
-        "https://github.com/adalca/neurite/migration-guide.",
-        FutureWarning,
-        stacklevel=2
-        )
     # tensorflow is default backend
     try:
         import tensorflow
