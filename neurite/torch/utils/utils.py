@@ -27,7 +27,7 @@ __all__ = [
     'mse_loss',
     'create_gaussian_kernel',
     'gaussian_smoothing',
-    'sample_bernoulli_distribution',
+    'bernoulli',
     'apply_bernoulli_mask',
     'subsample_tensor',
     'uniform'
@@ -253,7 +253,7 @@ def gaussian_smoothing(
     return smoothed_tensor
 
 
-def sample_bernoulli_distribution(p: float = 0.5, shape: tuple = (1,)):
+def bernoulli(p: float = 0.5, shape: tuple = (1,)):
     """
     Sample from a Bernoulli distribution with a specified probability and shape.
 
@@ -275,7 +275,7 @@ def sample_bernoulli_distribution(p: float = 0.5, shape: tuple = (1,)):
     Examples
     --------
     >>> # Generate samples from the Bernoulli distribution
-    >>> samples = sample_bernoulli(p=0.25, shape=(1, 32, 32, 32))
+    >>> samples = bernoulli(p=0.25, shape=(1, 32, 32, 32))
     >>> # Mean (expectation) should be ~=`p`
     >>> print(samples.mean())
     tensor(0.2471)
@@ -340,7 +340,7 @@ def apply_bernoulli_mask(input_tensor, p: float = 0.5, returns: str = None):
     >>> print((masked_shape/original_shape))
     """
     # Sample the Bernoulli mask with parameter `p`
-    bernoulli_mask = sample_bernoulli_distribution(p=p, shape=input_tensor.shape)
+    bernoulli_mask = bernoulli(p=p, shape=input_tensor.shape)
     # Clone the input tensor for future computations
     masked = torch.clone(input_tensor)
 
