@@ -430,7 +430,7 @@ def subsample_tensor(
 def subsample_tensor_random_dims(
     input_tensor: torch.Tensor,
     stride: int = 2,
-    forbidden_dims: list = None,
+    forbidden_dims: list = (0, 1),
     p: float = 0.5,
     max_concurrent_subsamplings: int = None
 ) -> torch.Tensor:
@@ -442,13 +442,15 @@ def subsample_tensor_random_dims(
     Parameters
     ----------
     input_tensor : torch.Tensor
-        The input tensor to be subsampled.
+        The input tensor to be subsampled. Assumed to have batch and channel dimensions.
     stride : int, optional
-        The stride value to use when subsampling each selected dimension.
-        By default, this is set to 2.
+        The stride value to use when subsampling each selected dimension. Can be an integer or a
+        tuple corresponding to the range of strides to sample. By default, 2.
+            - A stride of 1 does not result in any subsampling.
+            - A stride of 2 will reduce the elements of the selected dimension by 1/2.
     forbidden_dims : list, optional
         A list of dimensions that should not be subsampled. If None, no dimensions
-        are forbidden from subsampling. Default is None.
+        are forbidden from subsampling. Default is (0, 1) to ignore batch and channel dimensions.
     p : float, optional
         The probability of selecting each dimension for subsampling. This probability 
         is applied as an independent Bernoulli trial for each dimension. By default, 0.5.
@@ -465,58 +467,83 @@ def subsample_tensor_random_dims(
     Examples
     --------
     >>> import torch
-    # Defining two dimensional input tensor of shape (5, 5)
-    >>> input_tensor = torch.arange(25).view(5, 5)
-    # Visualize the tensor
+    >>> # Defining input tensor with batch and channel dimensions, and spatial dims=(5, 5)
+    >>> input_tensor = torch.arange(25).view(1, 1, 5, 5)
+    >>> # Visualize the tensor
     >>> print(input_tensor)
-    tensor([[ 0,  1,  2,  3,  4],
-            [ 5,  6,  7,  8,  9],
-            [10, 11, 12, 13, 14],
-            [15, 16, 17, 18, 19],
-            [20, 21, 22, 23, 24]])
-    # Subsample the tensor. This may now (randomly) subsample more than one dimension.
+    tensor([[[[ 0,  1,  2,  3,  4],
+              [ 5,  6,  7,  8,  9],
+              [10, 11, 12, 13, 14],
+              [15, 16, 17, 18, 19],
+              [20, 21, 22, 23, 24]]]])
+    >>> # Subsample the tensor. This may now (randomly) subsample more than one dimension.
     >>> subsampled_tensor = subsample_tensor_random_dims(input_tensor)
     >>> print(subsampled_tensor)
-    tensor([[ 0,  2,  4],
-            [10, 12, 14],
-            [20, 22, 24]])
+    tensor([[[[ 0,  3],
+              [10, 13],
+              [20, 23]]]])
+    >>> # Subsample by defining the stride range.
+    >>> subsampled_tensor = subsample_tensor_random_dims(input_tensor, stride=(3, 4))
+    >>> print(subsampled_tensor)
+    tensor([[[[ 0,  4],
+              [20, 24]]]])
     """
     # Determine how many dimensions should be subsampled at once
     if max_concurrent_subsamplings is None:
-        # If none we will subsample, at most, all of them at once!
+        # If None, we will subsample at most *all* of them (at once!)
         max_concurrent_subsamplings = input_tensor.dim()
     elif max_concurrent_subsamplings <= input_tensor.dim():
         # Great. It's already defined :)
         pass
     elif max_concurrent_subsamplings > input_tensor.dim():
+        # Sometimes, you might try to define a `max_concurrent_subsamplings` that's not possible :(
         raise ValueError(
             f"Your tensor doesn't have {max_concurrent_subsamplings} dimensions!"
             )
 
-    # Randomly sample the dimensions to subsample by randomly permuting the list of allowed
-    # dimensions and taking the first `max_concurrent_subsamplings`
-    valid_dimensions_to_subsample = torch.randperm(
+    # Sample the dimensions (to subsample) by randomly permuting the list of allowed dimensions and
+    # taking the first `max_concurrent_subsamplings`
+    dimensions_to_subsample = torch.randperm(
         input_tensor.dim()
     )[:max_concurrent_subsamplings]
-    # Randomly sample which dimensions to subsample via iid bernoulli trials.
+
+    # Remove all forbidden dimensions (dimensions that should not be subsampled)
+    if forbidden_dims is not None:
+        # Convert to tensor
+        forbidden_dims = torch.Tensor(forbidden_dims)
+        # Make mask to remove elements in `dimensions_to_subsample` that are in `forbidden_dims`
+        mask = torch.isin(dimensions_to_subsample, forbidden_dims)
+        # Invert mask and apply
+        dimensions_to_subsample = dimensions_to_subsample[~mask]
+
+    # We might not want to subsample the same number of dimensions every time as defined by
+    # `max_concurrent_subsamplings`, so we'll mask some out with iid Bernoulli trials. 
     dimensions_to_subsample = apply_bernoulli_mask(
-        input_tensor=valid_dimensions_to_subsample,
+        input_tensor=dimensions_to_subsample,
         p=p,
         returns='successes'
     )
-    # Remove all forbidden dimensions (dimensions that should not be subsampled)
-    if forbidden_dims is not None:
-        dimensions_to_subsample = [
-            dim for dim in dimensions_to_subsample if dim not in forbidden_dims
-        ]
+
+    # If the stride is an int, we want to define the lower bound to be at least 2
+    # This prevents us from trying to stride 0 elements (not possible), and one element (no effect).
+    if isinstance(stride, int):
+        stride = (2, stride)
+        if stride[0] == stride[1]:
+            # The stride will just be an integer
+            stride = stride[0]
+            stride_sampler = identity
+    else:
+        # The stride will be a sampler
+        stride_sampler = randint
+
     # Perform the subsampling.
     for dimension in dimensions_to_subsample:
+        sampled_stride = stride_sampler(stride)
         input_tensor = subsample_tensor(
             input_tensor,
             subsampling_dimension=dimension,
-            stride=stride
+            stride=sampled_stride
         )
-
     return input_tensor
 
 
