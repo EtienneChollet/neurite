@@ -5,7 +5,8 @@ __all__ = [
     'ensure_list',
     'Sampler',
     'Uniform',
-    'Fixed'
+    'Fixed',
+    'Normal'
 ]
 
 from typing import Type, Dict, Any, TypeVar, Generator, List, Union, Tuple
