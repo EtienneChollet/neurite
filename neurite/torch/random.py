@@ -6,7 +6,8 @@ __all__ = [
     'Sampler',
     'Uniform',
     'Fixed',
-    'Normal'
+    'Normal',
+    'Bernoulli'
 ]
 
 from typing import Type, Dict, Any, TypeVar, Generator, List, Union, Tuple
@@ -782,6 +783,145 @@ class Normal(Sampler):
                 raise ValueError("All elements in `n` must be positive integers.")
             # Tensor of samples with specified shape
             samples = self.distribution.sample(n)
+            return samples
+        else:
+            raise TypeError("`n` must be `None`, an `int`, or a `list`/`tuple` of `int`.")
+
+
+class Bernoulli(Sampler):
+    """
+    Sampler that generates binary outcomes (0 or 1) based on a specified probability `p`.
+
+    This sampler produces samples from a Bernoulli distribution, where `p` is the
+    probability of success (resulting in 1), and `1 - p` is the probability of
+    failure (resulting in 0).
+
+    Parameters
+    ----------
+    p : float
+        The probability of realizing a success (i.e., the probability of sampling a 1) from the
+        By default, 0.5. Must be in the range [0, 1].
+
+    Examples
+    --------
+    ### Single realization
+    >>> # Instantiate `Bernoulli` with p=0.7
+    >>> sampler = Bernoulli(p=0.7)
+    >>> # Single scalar sample
+    >>> sample = sampler()
+    >>> print(sample)
+    1
+
+    ### Multiple realizations as a list
+    >>> # Generate 5 samples as a list
+    >>> samples = sampler(n=5)
+    >>> print(samples)
+    [1, 0, 1, 1, 0]
+
+    ### Tensor of realizations
+    >>> # Generate a tensor of samples with shape (2, 3)
+    >>> tensor_samples = sampler(n=[2, 3])
+    >>> print(tensor_samples)
+    tensor([[1, 0, 1],
+            [1, 1, 0]])
+    """
+
+    def __init__(self, p: float = 0.5):
+        """
+        Initialize the `Bernoulli` sampler with a specified probability `p`.
+
+        Parameters
+        ----------
+        p : float
+            The probability of realizing a success (i.e., the probability of sampling a 1) from the
+            By default, 0.5. Must be in the range [0, 1].
+
+        """
+        super().__init__(p=p)
+        # Validate parameter
+        if not isinstance(p, (int, float)):
+            raise TypeError(f"`p` must be an int or float, got {type(p).__name__}")
+        if not 0 <= p <= 1:
+            raise ValueError("`p` must be between 0 and 1 inclusive.")
+
+        # Initialize the Bernoulli distribution
+        self.distribution = torch.distributions.Bernoulli(probs=p)
+
+    def __call__(
+        self,
+        n: Union[int, List[int], Tuple[int, ...]] = None,
+        **backend: Any
+    ) -> Union[int, List[int], torch.Tensor]:
+        """
+        Generates samples from a Bernoulli distribution based on probability `p`.
+
+        Depending on the input parameter `n`, the method returns:
+            - A single integer (0 or 1) if `n` is `None`.
+            - A list of integers if `n` is an integer.
+            - A PyTorch tensor of integers with the specified shape if `n` is a list
+              or tuple of integers.
+
+        Parameters
+        ----------
+        n : Union[int, List[int], Tuple[int, ...]], optional
+            The number of samples to generate.
+                - If `None`, returns a single scalar sample.
+                - If an `int`, returns a list of samples.
+                - If a `list` or `tuple` of `int`, returns a tensor of samples with
+                  the specified shape.
+        **backend : Any
+            Additional keyword arguments to pass to the backend sampling implementation.
+
+        Returns
+        -------
+        Union[int, List[int], torch.Tensor]
+            The generated samples, varying in type based on `n`.
+
+        Examples
+        --------
+        ### Single realization
+        >>> # Instantiate `Bernoulli` with p=0.7
+        >>> sampler = Bernoulli(p=0.7)
+        >>> # Single scalar sample
+        >>> sample = sampler()
+        >>> print(sample)
+        1
+
+        ### Multiple realizations as a list
+        >>> # Generate 5 samples as a list
+        >>> samples = sampler(n=5)
+        >>> print(samples)
+        [1, 0, 1, 1, 0]
+
+        ### Tensor of realizations
+        >>> # Generate a tensor of samples with shape (2, 3)
+        >>> tensor_samples = sampler(n=[2, 3])
+        >>> print(tensor_samples)
+        tensor([[1, 0, 1],
+                [1, 1, 0]])
+        """
+        # Extract parameter
+        p = self.theta.get('p')
+
+        # Re-initialize the distribution in case p has been updated
+        self.distribution = torch.distributions.Bernoulli(probs=p)
+
+        # Validate `n` and determine output format
+        if n is None:
+            # Single scalar sample
+            sample = self.distribution.sample().item()
+            return int(sample)
+        elif isinstance(n, int):
+            if n <= 0:
+                raise ValueError("`n` must be a positive integer.")
+            # List of samples
+            samples_tensor = self.distribution.sample((n,))
+            return samples_tensor.int().tolist()
+        elif isinstance(n, (list, tuple)):
+            if not all(isinstance(dim, int) and dim > 0 for dim in n):
+                raise ValueError("All elements in `n` must be positive integers.")
+            # Tensor of samples with specified shape
+            samples = self.distribution.sample(n).int()
             return samples
         else:
             raise TypeError("`n` must be `None`, an `int`, or a `list`/`tuple` of `int`.")
