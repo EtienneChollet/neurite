@@ -665,11 +665,18 @@ def uniform(*args, **kwargs) -> torch.Tensor:
     # Going to have to handle unique case of shape in both args and kwargs
     if len(args) == 3:
         min, max, shape = *make_range(*args[:2]), args[2]
+        if isinstance(shape, int):
+            # Make shape into a tuple for better handling.
+            shape = (shape,)
     else:
         min, max = make_range(*args, **kwargs)
 
     # Now for handling shape in kwargs (min and max are handled in make_range())
     if 'shape' in kwargs:
         shape = kwargs['shape']
+
+    # Make shape into a tuple for better handling.
+    if isinstance(shape, int):
+        shape = (shape,)
 
     return torch.rand(shape).mul(max - min).add(min)
