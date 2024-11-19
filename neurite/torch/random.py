@@ -295,7 +295,7 @@ class Sampler:
             "The __call__ method must be implemented by subclasses of Sampler."
         )
 
-    def seralize(self) -> dict:
+    def serialize(self) -> dict:
         """
         Serializes the object's state into a dictionary.
 
