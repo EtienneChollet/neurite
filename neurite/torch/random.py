@@ -237,7 +237,6 @@ class Sampler:
         """
         theta = self.__getattribute__('theta')
         if item in theta:
-            theta = self._ensure_same_length(theta)
             return theta[item]
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{item}'")
 
