@@ -30,7 +30,9 @@ __all__ = [
     'bernoulli',
     'apply_bernoulli_mask',
     'subsample_tensor',
+    'subsample_tensor_random_dims',
     'upsample_tensor',
+    'make_range',
     'uniform'
 ]
 
@@ -565,6 +567,64 @@ def upsample_tensor(
     return upsampled
 
 
+def make_range(*args, **kwargs) -> tuple:
+    """
+    Creates a tuple specigying the bounds for a range of numbers `(min, max)`.
+
+    This function generates a tuple containing the min and max values for a range. The range can be
+    flexibly defined through positional and/or keyword arguments. If only one positional argument is
+    provided, it is interpreted as `max` with `min` defaulting to 0. Keyword arguments can be used
+    to explicitly set `min` and/or `max`, overriding positional arguments.
+
+    Parameters
+    ----------
+    min : int or float, optional
+        The minimum value of the range.
+    max : int or float, optional
+        The maximum value of the range.
+
+    Returns
+    -------
+    tuple of (int or float, int or float)
+        A tuple containing the minimum and maximum values `(min, max)`.
+
+    Examples
+    --------
+    >>> # Using two positional arguments
+    >>> rng = make_range(0, 19.7)
+    >>> print(rng)
+    (0, 19.7)
+    >>> # Using one positional argument
+    >>> rng = make_range(5)
+    >>> print(rng)
+    (0, 5)
+    >>> # Using keyword arguments
+    >>> rng = make_range(min=0.6, 1)
+    >>> print(rng)
+    (0.6, 1)
+    """
+    # Setting default values
+    min, max = 0, 1
+    # Handle positional arguments
+    if len(args) == 2:
+        min, max = args
+    elif len(args) == 1:
+        # if only one input arg is defined, interpret it as `max`
+        min, max = 0, args[0]
+
+    # Handle kwargs (if they exist)
+    if 'min' in kwargs:
+        min = kwargs['min']
+    if 'max' in kwargs:
+        max = kwargs['max']
+
+    # Thrown an error if min is greater than max
+    if max <= min:
+        raise ValueError("`max` must be greater than `min`.")
+
+    return (min, max)
+
+
 def uniform(*args, **kwargs) -> torch.Tensor:
     """
     Sample from a continuous uniform distribution on an exclusive range. If only one value is
@@ -598,29 +658,14 @@ def uniform(*args, **kwargs) -> torch.Tensor:
             [15.6445, 16.0478]])
     """
     min, max, shape = 0, 1, (1,)
-
-    # Handle arguments according to shape (important for allowing single input arg to be `max`)
+    # Going to have to handle unique case of shape in both args and kwargs
     if len(args) == 3:
-        min, max, shape = args
-    elif len(args) == 2:
-        min, max = args
-    elif len(args) == 1:
-        # if only one input arg is defined, interpret it as `max`
-        min, max = 0.0, args[0]
+        min, max, shape = *make_range(*args[:2]), args[2]
     else:
-        raise ValueError(
-            "Please provide either one argument (to define `max`) or two arguments (to define "
-            "`min` and `max` respectively)."
-            )
-    # Handle kwargs
-    if 'min' in kwargs:
-        min = kwargs['min']
-    if 'max' in kwargs:
-        max = kwargs['max']
+        min, max = make_range(*args, **kwargs)
+
+    # Now for handling shape in kwargs (min and max are handled in make_range())
     if 'shape' in kwargs:
         shape = kwargs['shape']
-
-    if max <= min:
-        raise ValueError("`max` must be greater than `min`.")
 
     return torch.rand(shape).mul(max - min).add(min)
