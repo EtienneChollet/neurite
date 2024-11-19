@@ -609,8 +609,12 @@ def make_range(*args, **kwargs) -> tuple:
     if len(args) == 2:
         min, max = args
     elif len(args) == 1:
-        # if only one input arg is defined, interpret it as `max`
-        min, max = 0, args[0]
+        if isinstance(args[0], list | tuple):
+            # if the argument is a list, unpack it:
+            min, max = args[0]
+        else:
+            # if only one input arg is defined, interpret it as `max`
+            min, max = 0, args[0]
 
     # Handle kwargs (if they exist)
     if 'min' in kwargs:
