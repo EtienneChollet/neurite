@@ -304,9 +304,9 @@ class Sampler:
 
         Notes
         -----
-        The `type` field captures the name of the immediate parent class, which 
+        The `type` field captures the name of the immediate parent class, which
         can be useful for hierarchical categorization. The `module` and `qualname`
-        fields ensure the object's origin can be traced and reconstructed if 
+        fields ensure the object's origin can be traced and reconstructed if
         necessary.
         """
         state_dict = {
