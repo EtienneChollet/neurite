@@ -262,39 +262,66 @@ class Sampler:
         else:
             return super().__setattr__(item, value)
 
-    def __call__(
-        self,
-        n: Union[int, List[int]] = None, **backend: Any
-    ) -> Union[Any, List[Any], torch.Tensor]:
+
+    def __call__(self, n=None, **backend):
         """
         Generates samples based on the sampler's parameters.
 
-        This method is intended to be overridden by subclasses to implement specific sampling
-        behaviors.
+        This method handles the interpretation of the `n` parameter and delegates
+        the actual sampling to the `_sample` method, which must be implemented by
+        subclasses.
 
         Parameters
         ----------
-        n : Union[int, List[int]], optional
-            The number of samples to generate.
-            - If `None`, returns a single scalar sample.
-            - If an `int`, returns a list of samples.
-            - If a `list` of `int`, returns a tensor of samples.
-        **backend : Any
-            Additional keyword arguments to pass to the backend sampling implementation.
+        n : Union[int, List[int], Tuple[int, ...]], optional
+            Specifies the number or shape of samples to generate.
 
         Returns
         -------
         Union[Any, List[Any], torch.Tensor]
-            The generated samples, varying in type based on the `n` parameter.
-
-        Raises
-        ------
-        NotImplementedError
-            Indicates that the method should be implemented by subclasses.
+            The generated samples.
         """
+        # Determine the sample shape based on `n`
+        if n is None:
+            shape = [1]
+        elif isinstance(n, int):
+            if n <= 0:
+                raise ValueError("`n` must be a positive integer.")
+            shape = [n]
+        elif isinstance(n, (list, tuple)):
+            if not all(isinstance(dim, int) and dim > 0 for dim in n):
+                raise ValueError("All elements in `n` must be positive integers.")
+            shape = list(n)
+        else:
+            raise TypeError("`n` must be `None`, an `int`, or a list/tuple of ints.")
 
+        # Generate samples using the subclass's _sample method
+        samples = self._sample(shape=shape, **backend)
+
+        # Format the output based on the input `n`
+        if n is None:
+            return samples.view(-1)[0].item()
+        elif isinstance(n, int):
+            return samples.view(-1).tolist()
+        else:
+            return samples
+
+    def _sample(self, shape, **backend):
+        """
+        Abstract method to generate samples. Must be implemented by subclasses.
+
+        Parameters
+        ----------
+        shape : List[int]
+            The shape of the samples to generate.
+
+        Returns
+        -------
+        torch.Tensor
+            The generated samples as a tensor.
+        """
         raise NotImplementedError(
-            "The __call__ method must be implemented by subclasses of Sampler."
+            "The _sample method must be implemented by subclasses of Sampler."
         )
 
     def serialize(self) -> dict:
