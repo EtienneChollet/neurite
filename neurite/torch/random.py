@@ -293,6 +293,32 @@ class Sampler:
             "The __call__ method must be implemented by subclasses of Sampler."
         )
 
+    def seralize(self) -> dict:
+        """
+        Serializes the object's state into a dictionary.
+
+        This method captures key attributes of the object and metadata about its
+        class and module for purposes such as taxonomy, reconstruction, or debugging.
+
+        Notes
+        -----
+        The `type` field captures the name of the immediate parent class, which 
+        can be useful for hierarchical categorization. The `module` and `qualname`
+        fields ensure the object's origin can be traced and reconstructed if 
+        necessary.
+        """
+        state_dict = {
+            # Parent class, for more broad taxonomy/snapshot view
+            'type': type(self).__bases__[0].__name__,
+            # The module that the sample may be found in (and reconstructed from)
+            'module': self.__module__,
+            # # The qualified name of the class (for reconstruction purposes)
+            'qualname': self.__class__.__name__,
+            # The sampler's parameters
+            'theta': self.theta,
+        }
+        return state_dict
+
 
 class Uniform(Sampler):
     """
