@@ -275,7 +275,6 @@ class Sampler:
             - If `None`, returns a single scalar sample.
             - If an `int`, returns a list of samples.
             - If a `list` of `int`, returns a tensor of samples.
-
         **backend : Any
             Additional keyword arguments to pass to the backend sampling implementation.
 
@@ -293,3 +292,171 @@ class Sampler:
         raise NotImplementedError(
             "The __call__ method must be implemented by subclasses of Sampler."
         )
+
+
+class Uniform(Sampler):
+    """
+    Sampler that generates uniformly distributed floating-point numbers within a specified range.
+
+    This sampler produces samples from a uniform distribution over the interval
+    `[min_val, max_val]`. It leverages PyTorch's random number generation capabilities to create
+    the samples.
+
+    Parameters
+    ----------
+    min_val : float or int, optional
+        The lower bound of the sampling range (inclusive). Default is 0.0.
+    max_val : float or int, optional
+        The upper bound of the sampling range (inclusive). Default is 1.0.
+
+    Attributes
+    ----------
+    theta : Dict[str, Any]
+        Dictionary storing the sampling parameters (`min_val` and `max_val`).
+
+    Examples
+    --------
+    >>> # Instantiate `Uniform` with default range [0.0, 1.0]
+    >>> sampler = Uniform()
+    >>> # Single scalar sample
+    >>> sample = sampler()
+    >>> print(sample)
+    0.5372732281684875
+
+    >>> # Instantiate `Uniform` with custom range [5, 10]
+    >>> sampler = Uniform(min_val=5, max_val=10)
+    >>> # Generate 5 samples as a list
+    >>> samples = sampler(n=5)
+    >>> print(samples)
+    [7.829, 5.123, 9.456, 6.789, 8.012]
+
+    >>> # Instantiate `Uniform` and generate a tensor of samples
+    >>> sampler = Uniform(min_val=-2.0, max_val=2.0)
+    >>> Sample a tensor with shape (3, 2)
+    >>> tensor_samples = sampler(n=[3, 2])
+    >>> print(tensor_samples)
+    tensor([[-1.2345,  0.5678],
+            [ 1.8901, -0.1234],
+            [ 0.4567,  1.2345]])
+    """
+
+    def __init__(
+        self,
+        min_val: Union[int, float] = 0.0,
+        max_val: Union[int, float] = 1.0
+    ):
+        """
+        Initialize`Uniform` with specified minimum and maximum values.
+
+        Parameters
+        ----------
+        min_val : float or int, optional
+            The lower bound of the sampling range (inclusive). Default is 0.0.
+        max_val : float or int, optional
+            The upper bound of the sampling range (inclusive). Default is 1.0.
+        """
+        super().__init__(min_val=min_val, max_val=max_val)
+        # Validate parameters
+        if not isinstance(min_val, (int, float)):
+            raise TypeError(f"`min_val` must be an int or float, got {type(min_val).__name__}")
+        if not isinstance(max_val, (int, float)):
+            raise TypeError(f"`max_val` must be an int or float, got {type(max_val).__name__}")
+        if max_val <= min_val:
+            raise ValueError("`max_val` must be greater than `min_val`.")
+
+    def __call__(
+        self,
+        n: Union[int, List[int], Tuple[int, ...]] = None,
+        **backend: Any
+    ) -> Union[float, List[float], torch.Tensor]:
+        """
+        Generates samples from a uniform distribution over the interval `[min_val, max_val]`.
+
+        Depending on the input parameter `n`, the method returns:
+            - A single scalar float if `n` is `None`.
+            - A list of floats if `n` is an integer.
+            - A PyTorch tensor of floats with the specified shape if `n` is a list or tuple of
+            integers.
+
+        Parameters
+        ----------
+        n : Union[int, List[int], Tuple[int, ...]], optional
+            The number of samples to generate.
+                - If `None`, returns a single scalar sample.
+                - If an `int`, returns a list of samples.
+                - If a `list` or `tuple` of `int`, returns a tensor of samples with the specified
+                shape.
+        **backend : Any
+            Additional keyword arguments to pass to the backend sampling implementation.
+
+        Returns
+        -------
+        Union[float, List[float], torch.Tensor]
+            The generated samples, varying in type based on `n`.
+
+        Examples
+        --------
+        >>> # Instantiate `Uniform` with default range [0.0, 1.0]
+        >>> sampler = Uniform()
+        >>> # Single scalar sample
+        >>> sample = sampler()
+        >>> print(sample)
+        0.5372732281684875
+
+        >>> # Instantiate `Uniform` with custom range [5, 10]
+        >>> sampler = Uniform(min_val=5, max_val=10)
+        >>> # Generate 5 samples as a list
+        >>> samples = sampler(n=5)
+        >>> print(samples)
+        [7.829, 5.123, 9.456, 6.789, 8.012]
+
+        >>> # Instantiate `Uniform` and generate a tensor of samples
+        >>> sampler = Uniform(min_val=-2.0, max_val=2.0)
+        >>> Sample a tensor with shape (3, 2)
+        >>> tensor_samples = sampler(n=[3, 2])
+        >>> print(tensor_samples)
+        tensor([[-1.2345,  0.5678],
+                [ 1.8901, -0.1234],
+                [ 0.4567,  1.2345]])
+        """
+
+        # Extract parameters
+        theta = self._ensure_same_length(self.theta, nsamples=n if isinstance(n, int) else None)
+        min_val = theta.get('min_val', 0.0)
+        max_val = theta.get('max_val', 1.0)
+
+        # Handle min_val and max_val being lists or scalars
+        if isinstance(min_val, list):
+            min_val = torch.tensor(min_val, dtype=torch.float32)
+        elif isinstance(min_val, tuple):
+            min_val = torch.tensor(min_val, dtype=torch.float32)
+        if isinstance(max_val, list):
+            max_val = torch.tensor(max_val, dtype=torch.float32)
+        elif isinstance(max_val, tuple):
+            max_val = torch.tensor(max_val, dtype=torch.float32)
+
+        # Validate `n` and determine output format
+        if n is None:
+            # Single scalar sample
+            sample = torch.rand(1, **backend).item() * (max_val - min_val) + min_val
+            if isinstance(sample, torch.Tensor):
+                return sample.item()
+            return sample
+        elif isinstance(n, int):
+            if n <= 0:
+                raise ValueError("`n` must be a positive integer.")
+            # List of samples
+            samples_tensor = torch.rand(n, **backend) * (max_val - min_val) + min_val
+            if isinstance(min_val, torch.Tensor) and len(min_val.shape) > 0:
+                # Element-wise sampling if min_val and max_val are tensors
+                return samples_tensor.tolist()
+            else:
+                return samples_tensor.tolist()
+        elif isinstance(n, (list, tuple)):
+            if not all(isinstance(dim, int) and dim > 0 for dim in n):
+                raise ValueError("All elements in `n` must be positive integers.")
+            # Tensor of samples with specified shape
+            samples = torch.rand(*n, **backend) * (max_val - min_val) + min_val
+            return samples
+        else:
+            raise TypeError("`n` must be `None`, an `int`, or a `list`/`tuple` of `int`.")
