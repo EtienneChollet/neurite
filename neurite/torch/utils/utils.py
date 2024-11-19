@@ -150,7 +150,7 @@ def mse_loss(input_tensor: torch.Tensor, target_tensor: torch.Tensor) -> torch.T
     return torch.mean((input_tensor - target_tensor) ** 2)
 
 
-def create_gaussian_kernel(kernel_size: int = 3, sigma: float = 1, ndim: int = 3):
+def create_gaussian_kernel(kernel_size: int = 3, sigma: float = 1, ndim: int = 3) -> torch.Tensor:
     """
     Create a {1D, 2D, 3D} Gaussian kernel.
 
@@ -253,7 +253,7 @@ def gaussian_smoothing(
     return smoothed_tensor
 
 
-def bernoulli(p: float = 0.5, shape: tuple = (1,)):
+def bernoulli(p: float = 0.5, shape: tuple = (1,)) -> torch.Tensor:
     """
     Sample from a Bernoulli distribution with a specified probability and shape.
 
@@ -288,7 +288,7 @@ def bernoulli(p: float = 0.5, shape: tuple = (1,)):
     return bernoulli_result
 
 
-def apply_bernoulli_mask(input_tensor, p: float = 0.5, returns: str = None):
+def apply_bernoulli_mask(input_tensor, p: float = 0.5, returns: str = None) -> torch.Tensor:
     """
     Apply a Bernoulli mask to a tensor.
 
@@ -362,7 +362,7 @@ def subsample_tensor(
         input_tensor: torch.Tensor,
         subsampling_dimension: int = 0,
         stride: int = 2
-):
+) -> torch.Tensor:
     """
     Subsamples `input_tensor` by a factor `stride` along the specified dimension.
 
@@ -429,7 +429,7 @@ def subsample_tensor_random_dims(
     forbidden_dims: list = None,
     p: float = 0.5,
     max_concurrent_subsamplings: int = None
-):
+) -> torch.Tensor:
     """
     Subsamples the input tensor along randomly selected dimensions, with constraints
     on which dimensions to subsample (`forbidden_dims`), the stride, and the probability of
