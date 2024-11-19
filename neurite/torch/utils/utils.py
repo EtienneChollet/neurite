@@ -33,7 +33,8 @@ __all__ = [
     'subsample_tensor_random_dims',
     'upsample_tensor',
     'make_range',
-    'uniform'
+    'uniform',
+    'randint'
 ]
 
 import torch
@@ -680,3 +681,51 @@ def uniform(*args, **kwargs) -> torch.Tensor:
         shape = (shape,)
 
     return torch.rand(shape).mul(max - min).add(min)
+
+
+def randint(*args, **kwargs) -> torch.Tensor:
+    """
+    Sample uniformly distributed integers on the inclusive range `[min, max]`. If only one value is
+    provided, it's interpreted as `max`.
+
+    Parameters
+    ----------
+    min : float, optional
+        Lower bound of the range (inclusive). Default is 0.
+    max : float, optional
+        Upper bound of the range (inclusive). Default is 1.
+    shape : tuple, optional
+        Shape of the output samples. Can be an integer for a flattened list of realizations, or a
+        tuple defining the shape of the output realizations. Default is (1,).
+
+    Returns
+    -------
+    torch.Tensor
+        A tensor containing a single sample from the specified uniform integer distribution.
+
+    Examples
+    --------
+    >>> # Sample the uniform integer distribution by defining the maximum value
+    >>> randint(4, shape=10)
+    tensor([0, 2, 1, 1, 1, 4, 2, 4, 2, 4])
+    >>> # Sample by defining min and max bounds
+    >>> uniform(-3, -2, 10)
+    tensor([-2, -2, -3, -2, -2, -2, -2, -3, -3, -2])
+    """
+    # Default parameters
+    min, max, shape = 0, 1, (1,)
+    # Going to have to handle unique case of shape in both args and kwargs
+    if len(args) == 3:
+        min, max, shape = *make_range(*args[:2]), args[2]
+    else:
+        min, max = make_range(*args, **kwargs)
+
+    # Now for handling shape in kwargs (min and max are handled in make_range())
+    if 'shape' in kwargs:
+        shape = kwargs['shape']
+
+    # Make shape into a tuple for better handling.
+    if isinstance(shape, int):
+        shape = (shape,)
+
+    return torch.randint(min, max+1, shape)
