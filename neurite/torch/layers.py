@@ -51,6 +51,7 @@ __all__ = [
     "Bernoulli"
     ]
 
+import warnings
 from typing import Optional, Union, Tuple
 import torch
 from torch import nn
@@ -349,25 +350,128 @@ class GaussianBlur(nn.Module):
 
 
 # TODO: Move to an augmentation package/repo?
-class Subsample(nn.Module):
+class Resample(nn.Module):
     """
-    A PyTorch module to subsample a tensor.
+    A PyTorch module to resample a tensor.
 
-    This module subsamples the input tensor by a factor `f` (stride) along one dimension using the
-    nearest-neighbor algorithm. Options exist to squsequently downsample the tensor to restore it's
-    original shape.
+    This module resamples the input tensor by a factor of `stride` along the
+    specified dimension by interleaving dropouts along it (keeping every `stride`th element).
+    Optionally upsample the tensor after downsampling it to restore it to its original dimensions.
     """
-    def __init__(self):
+    def __init__(
+        self,
+        operations: str = 'su',
+        stride: Union[int, Tuple[int, int]] = 2,
+        forbidden_dims: Tuple[int, int] = (1, 0),
+        p: float = 0.5,
+        max_concurrent_subsamplings: int = None,
+        mode: str = 'nearest'
+        ):
         """
-        Initialize the `Subsample` module.
+        Initialize the `Resample` module.
+
+        Parameters
+        ----------
+        operations : str
+            Operations in the order that they are to be performed on the input tensor. By defailt,
+            'su' for random strided subsampling, followed by interpolated upsampling. Options can be
+            combined into a single string. Options are:
+                - 's': Random strided subsampling with
+                `neurite.torch.utils.subsample_tensor_random_dims()`
+                - 'u': Interpolated upsampling with `neurite.torch.utils.upsample_tensor()`
+        stride : int or tuple, optional
+            The stride value to use when subsampling a given dimension. Can be an integer or
+            a tuple corresponding to the range of strides to sample. By default, 2.
+                - A stride of 1 does not result in any subsampling.
+                - A stride of 2 will reduce the elements of the selected dimension by 1/2.
+        forbidden_dims : list, optional
+            A list of dimensions that should not be subsampled. If None, no dimensions
+            are forbidden from subsampling. Default is (0, 1) to ignore batch and channel
+            dimensions.
+        p : float, optional
+            The probability of selecting each dimension for subsampling. This probability 
+            is applied as an independent Bernoulli trial for each dimension. By default, 0.5.
+        max_concurrent_subsamplings : int, optional
+            The maximum number of dimensions that can be subsampled simultaneously. If
+            None, the number of concurrent subsamplings is set to the number of dimensions
+            in `input_tensor`. Default is None.
+        mode : str, optional
+            The interpolation mode to use for upsampling. By default None. Options (WRT spatial
+            dimensions) include:
+                - 'nearest' (default)
+                - 'linear' (1D-only)
+                - 'bilinear' (2D-only)
+                - 'bicubic' (2D-only)
+                - 'trilinear' (3D-only)
+                - 'area'
+
+        Examples
+        --------
+        ### Custom stride and only subsampling
+        >>> # Initialize a random 3D tensor with batch and channel dims
+        >>> input_tensor = torch.randn(1, 1, 128, 128, 128)
+        >>> # Resample the tensor with random strides on the inclusive interval (2, 5)
+        >>> resampled_tensor = Resample('s', stride=(2, 5))(input_tensor)
+        >>> # Spatial dimensions be different
+        >>> print(resampled_tensor.shape)
+        torch.Size([1, 1, 64, 128, 32])
+
+        ### Custom stride and repeated subsampling and upsampling with trilinear interpolation
+        >>> # Initialize a random 3D tensor with batch and channel dims
+        >>> input_tensor = torch.randn(1, 1, 128, 128, 128)
+        >>> # Resample the tensor with a stride upper bound of 6, trilinear interpolation, and with
+        3 consecutive repetitions of subsampling and upsampling
+        >>> resampled_tensor = Resample('sususu', stride=6, mode='trilinear')(input_tensor)
+        >>> # Spatial dims should be the same (because the last operation is upsampling to original)
+        >>> print(input_tensor.shape)
+        torch.Size([1, 1, 128, 128, 128])
         """
         super().__init__()
+        self.operations = operations
+        self.stride = stride
+        self.forbidden_dims = forbidden_dims
+        self.p = p
+        self.max_concurrent_subsamplings = max_concurrent_subsamplings
+        self.mode = mode
 
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
-        Performs the forward pass of the `Subsample` module.
+        Performs the forward pass of the `Resample` module.
         """
-        raise NotImplementedError("The `Subsample` module isn't ready yet :(")
+        # Start with the input tensor
+        resampled_tensor = input_tensor
+        original_spatial_shape = input_tensor.shape[2:]
+
+        # Iterate through the sequence of operation aliases and apply each in order
+        for i, operation in enumerate(self.operations):
+            if operation == 's':
+                # Apply subsampling
+                resampled_tensor = utils.subsample_tensor_random_dims(
+                    input_tensor=resampled_tensor,
+                    stride=self.stride,
+                    forbidden_dims=self.forbidden_dims,
+                    p=self.p,
+                    max_concurrent_subsamplings=self.max_concurrent_subsamplings
+                )
+            elif operation == 'u':
+                # Apply upsampling
+                resampled_tensor = utils.upsample_tensor(resampled_tensor, original_spatial_shape)
+        return resampled_tensor
+
+
+class Subsample(Resample):
+    """
+    @deprecated: Use `Resample` instead.
+    A PyTorch module to subsample and upsample a tensor based on specified operations.
+    """
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "Subsample is deprecated and will be removed in future versions. "
+            "Use ResampleModule instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super().__init__(*args, **kwargs)
 
 
 # TODO: Move to an augmentation package/repo?
