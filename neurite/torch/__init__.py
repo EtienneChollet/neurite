@@ -12,3 +12,4 @@ losses
 # Importing modules
 from . import layers
 from . import losses
+from . import random
