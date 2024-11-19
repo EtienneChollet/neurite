@@ -3,7 +3,9 @@ Random (samplers) for the neurite project.
 """
 __all__ = [
     'ensure_list',
-    'Sampler'
+    'Sampler',
+    'Uniform',
+    'Fixed'
 ]
 
 from typing import Type, Dict, Any, TypeVar, Generator, List, Union, Tuple
@@ -372,7 +374,7 @@ class Uniform(Sampler):
         max_val: Union[int, float] = 1.0
     ):
         """
-        Initialize`Uniform` with specified minimum and maximum values.
+        Initialize `Uniform` with specified minimum and maximum values.
 
         Parameters
         ----------
@@ -484,5 +486,139 @@ class Uniform(Sampler):
             # Tensor of samples with specified shape
             samples = torch.rand(*n, **backend) * (max_val - min_val) + min_val
             return samples
+        else:
+            raise TypeError("`n` must be `None`, an `int`, or a `list`/`tuple` of `int`.")
+
+
+class Fixed(Sampler):
+    """
+    Sampler that generates a fixed constant value.
+
+    This sampler always returns the same fixed value specified during initialization.
+    It can generate single scalar samples, lists of the fixed value, or tensors filled with the
+    fixed value based on the input parameter `n` in __call__.
+
+    Parameters
+    ----------
+    value : Any
+        The fixed value to return when sampling.
+
+    Examples
+    --------
+    ### Single realization
+    >>> # Instantiate `Fixed` with a fixed value of 5
+    >>> sampler = Fixed(value=5)
+    >>> # Single scalar sample
+    >>> sample = sampler()
+    >>> print(sample)
+    5
+
+    ### Listed/repeated realizations
+    >>> # Instantiate `Fixed` with a fixed value of 3.14
+    >>> sampler = Fixed(value=3.14)
+    >>> # Generate 4 samples as a list
+    >>> samples = sampler(n=4)
+    >>> print(samples)
+    [3.14, 3.14, 3.14, 3.14]
+
+    ### Tensor filled with realizations
+    >>> # Instantiate `Fixed` with a fixed value of -1
+    >>> sampler = Fixed(value=-1)
+    >>> # Generate a tensor of samples with shape (2, 3)
+    >>> tensor_samples = sampler(n=[2, 3])
+    >>> print(tensor_samples)
+    tensor([[-1, -1, -1],
+            [-1, -1, -1]])
+    """
+
+    def __init__(self, value: Any):
+        """
+        Initialize the `Fixed` sampler with a specified fixed value.
+
+        Parameters
+        ----------
+        value : Any
+            The fixed value to return when sampling.
+        """
+        super().__init__(value=value)
+
+    def __call__(
+        self,
+        n: Union[int, List[int], Tuple[int, ...]] = None,
+        **backend: Any
+    ) -> Union[Any, List[Any], torch.Tensor]:
+        """
+        Generates fixed value samples.
+
+        Depending on the input parameter `n`, the method returns:
+            - The fixed value itself if `n` is `None`.
+            - A list containing the fixed value repeated `n` times if `n` is an integer.
+            - A PyTorch tensor filled with the fixed value with the specified shape if `n` is a
+              list or tuple of integers.
+
+        Parameters
+        ----------
+        n : Union[int, List[int], Tuple[int, ...]], optional
+            The number of samples to generate.
+                - If `None`, returns the fixed value itself.
+                - If an `int`, returns a list containing the fixed value repeated `n` times.
+                - If a `list` or `tuple` of `int`, returns a tensor filled with the fixed value
+                  with the specified shape.
+        **backend : Any
+            Additional keyword arguments to pass to the backend sampling implementation.
+
+        Returns
+        -------
+        Union[Any, List[Any], torch.Tensor]
+            The generated samples, varying in type based on `n`.
+
+        Examples
+        --------
+        ### Single realization
+        >>> # Instantiate `Fixed` with a fixed value of 5
+        >>> sampler = Fixed(value=5)
+        >>> # Single scalar sample
+        >>> sample = sampler()
+        >>> print(sample)
+        5
+
+        ### Listed/repeated realizations
+        >>> # Instantiate `Fixed` with a fixed value of 3.14
+        >>> sampler = Fixed(value=3.14)
+        >>> # Generate 4 samples as a list
+        >>> samples = sampler(n=4)
+        >>> print(samples)
+        [3.14, 3.14, 3.14, 3.14]
+
+        ### Tensor filled with realizations
+        >>> # Instantiate `Fixed` with a fixed value of -1
+        >>> sampler = Fixed(value=-1)
+        >>> # Generate a tensor of samples with shape (2, 3)
+        >>> tensor_samples = sampler(n=[2, 3])
+        >>> print(tensor_samples)
+        tensor([[-1, -1, -1],
+                [-1, -1, -1]])
+        """
+        # Retrieve the fixed value
+        value = self.theta.get('value')
+
+        # Validate `n` and determine output format
+        if n is None:
+            # Single fixed value
+            return value
+        elif isinstance(n, int):
+            if n <= 0:
+                raise ValueError("`n` must be a positive integer.")
+            # List of fixed values
+            return [value for _ in range(n)]
+        elif isinstance(n, (list, tuple)):
+            if not all(isinstance(dim, int) and dim > 0 for dim in n):
+                raise ValueError("All elements in `n` must be positive integers.")
+            # Tensor filled with the fixed value with specified shape
+            try:
+                tensor_samples = torch.full(n, fill_value=value, **backend)
+                return tensor_samples
+            except Exception as e:
+                raise TypeError(f"Error creating tensor: {e}") from e
         else:
             raise TypeError("`n` must be `None`, an `int`, or a `list`/`tuple` of `int`.")
