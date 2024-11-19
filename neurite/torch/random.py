@@ -9,7 +9,7 @@ __all__ = [
 from typing import Type, Dict, Any, TypeVar, Generator, List, Union, Tuple
 import torch
 
-SamplerType = TypeVar('T', bound='Sampler')
+SamplerType = TypeVar('SamplerType', bound='Sampler')
 
 
 def ensure_list(x, size=None, crop=True, **kwargs):
@@ -50,7 +50,7 @@ class Sampler:
 
     @classmethod
     def make(
-        cls: Type[T],
+        cls: Type[SamplerType],
         maker_input: Union['Sampler', Dict[str, Any], Tuple[Any, ...], Any]
     ) -> SamplerType:
         """
