@@ -23,6 +23,7 @@ implied. See the License for the specific language governing permissions and lim
 the License.
 """
 __all__ = [
+    'identity',
     'soft_quantize',
     'mse_loss',
     'create_gaussian_kernel',
@@ -39,6 +40,11 @@ __all__ = [
 
 import torch
 import torch.nn.functional as F
+
+
+def identity(input_argument):
+    "Returns the `input_argument`."
+    return input_argument
 
 
 def soft_quantize(
