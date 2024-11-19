@@ -30,6 +30,7 @@ __all__ = [
     'bernoulli',
     'apply_bernoulli_mask',
     'subsample_tensor',
+    'upsample_tensor',
     'uniform'
 ]
 
@@ -514,6 +515,54 @@ def subsample_tensor_random_dims(
         )
 
     return input_tensor
+
+
+def upsample_tensor(
+    input_tensor: torch.Tensor,
+    shape: tuple,
+    mode: str = 'nearest',
+) -> torch.Tensor:
+    """
+    Upsamples 1D, 2D, or 3D tensors to a given `shape`.
+
+    Parameters
+    ----------
+    input_tensor : torch.Tensor
+        The input tensor to be upsampled. Assumed to have batch and channel dimensions.
+    shape : tuple
+        Spatial dimensions (without batch or channel dimensions) to upsample `input_tensor` into.
+    mode : str, optional
+        The interpolation mode to use. By default None. Options (WRT spatial dimensions) include:
+            - 'nearest' (default)
+            - 'linear' (1D-only)
+            - 'bilinear' (2D-only)
+            - 'bicubic' (2D-only)
+            - 'trilinear' (3D-only)
+            - 'area'
+
+    Examples
+    --------
+    >>> # 2D Upsampling
+    >>> input_tensor = torch.randn(1, 3, 32, 32)  # (B, C, H, W)
+    >>> upsampled_tensor = upsample_tensor(input_tensor, shape=(64, 64), mode='bilinear')
+    >>> print(upsampled_tensor.shape)
+    torch.Size([1, 3, 64, 64])
+    >>> # 3D Upsampling
+    >>> input_tensor = torch.randn(1, 3, 32, 32, 32)  # (B, C, D, H, W)
+    >>> upsampled_tensor = upsample_tensor(input_tensor, shape=(64, 64, 64), mode='bilinear')
+    >>> print(upsampled_tensor.shape)
+    torch.Size([1, 3, 64, 64, 64])
+    """
+    # Calculate the spatial dimensions (disregarding batch and channel)
+    spatial_dims = input_tensor.dim() - 2
+    if spatial_dims not in [1, 2, 3]:
+        raise ValueError(
+            f"Unsupported tensor dimensionality: {spatial_dims} spatial dimensions. "
+            "Only 1D, 2D, and 3D tensors are supported."
+        )
+    # Perform the upsampling operation
+    upsampled = F.interpolate(input_tensor, size=shape, mode=mode)
+    return upsampled
 
 
 def uniform(*args, **kwargs) -> torch.Tensor:
