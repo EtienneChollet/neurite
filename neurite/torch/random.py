@@ -622,3 +622,165 @@ class Fixed(Sampler):
                 raise TypeError(f"Error creating tensor: {e}") from e
         else:
             raise TypeError("`n` must be `None`, an `int`, or a `list`/`tuple` of `int`.")
+
+
+class Normal(Sampler):
+    """
+    Sampler that generates normally distributed floating-point numbers based on mean and variance.
+
+    This sampler produces samples from a normal (Gaussian) distribution defined by specified
+    `mean` and `variance` parameters.
+
+    Parameters
+    ----------
+    mean : float or int, optional
+        The mean of the normal distribution. Default is 0.0.
+    variance : float or int, optional
+        The variance of the normal distribution. Must be positive.
+        Default is 1.0.
+
+    Examples
+    --------
+    ### Default parameters
+    >>> # Instantiate `Normal` with default parameters
+    >>> sampler = Normal()
+    >>> # Single scalar sample
+    >>> sample = sampler()
+    >>> print(sample)
+    0.1234567890123456
+
+    ### Custom mean and variance
+    >>> # Instantiate `Normal` with custom mean and variance
+    >>> sampler = Normal(mean=5.0, variance=4.0)
+    >>> # Generate 5 samples as a list
+    >>> samples = sampler(5)
+    >>> print(samples)
+    [4.5678, 6.1234, 5.7890, 3.4567, 7.8901]
+
+    ### Sampling a tensor od realizations
+    >>> # Instantiate `Normal` and generate a tensor of realizations
+    >>> sampler = Normal(mean=-1.0, variance=0.25)
+    >>> # Sample a tensor with shape (2, 3)
+    >>> tensor_samples = sampler([2, 3])
+    >>> print(tensor_samples)
+    tensor([[-1.2345, -0.5678, -1.8901],
+            [-0.1234, -1.6789, -1.3456]])
+    """
+
+    def __init__(
+        self,
+        mean: Union[int, float] = 0.0,
+        variance: Union[int, float] = 1.0
+    ):
+        """
+        Initialize `Normal` with specified mean and variance.
+
+        Parameters
+        ----------
+        mean : float or int, optional
+            The mean of the normal distribution. Default is 0.0.
+        variance : float or int, optional
+            The variance of the normal distribution. Must be positive.
+            Default is 1.0.
+        """
+        super().__init__(mean=mean, variance=variance)
+        # Validate parameters
+        if not isinstance(mean, (int, float)):
+            raise TypeError(f"`mean` must be an int or float, got {type(mean).__name__}")
+        if not isinstance(variance, (int, float)):
+            raise TypeError(f"`variance` must be an int or float, got {type(variance).__name__}")
+        if variance <= 0:
+            raise ValueError("`variance` must be positive.")
+
+        # Compute standard deviation from variance
+        sigma = variance ** 0.5
+
+        # Initialize the Normal distribution
+        self.distribution = torch.distributions.Normal(loc=mean, scale=sigma)
+
+    def __call__(
+        self,
+        n: Union[int, List[int], Tuple[int, ...]] = None,
+        **backend: Any
+    ) -> Union[float, List[float], torch.Tensor]:
+        """
+        Generates samples from a normal distribution based on mean and variance.
+
+        Depending on the input parameter `n`, the method returns:
+            - A single scalar float if `n` is `None`.
+            - A list of floats if `n` is an integer.
+            - A PyTorch tensor of floats with the specified shape if `n` is a list or tuple of
+              integers.
+
+        Parameters
+        ----------
+        n : Union[int, List[int], Tuple[int, ...]], optional
+            The number of samples to generate.
+                - If `None`, returns a single scalar sample.
+                - If an `int`, returns a list of samples.
+                - If a `list` or `tuple` of `int`, returns a tensor of samples with the specified
+                  shape.
+        **backend : Any
+            Additional keyword arguments to pass to the backend sampling implementation.
+
+        Returns
+        -------
+        Union[float, List[float], torch.Tensor]
+            The generated samples, varying in type based on `n`.
+
+        Examples
+        --------
+        ### Default parameters
+        >>> # Instantiate `Normal` with default parameters
+        >>> sampler = Normal()
+        >>> # Single scalar sample
+        >>> sample = sampler()
+        >>> print(sample)
+        0.1234567890123456
+
+        ### Custom mean and variance
+        >>> # Instantiate `Normal` with custom mean and variance
+        >>> sampler = Normal(mean=5.0, variance=4.0)
+        >>> # Generate 5 samples as a list
+        >>> samples = sampler(5)
+        >>> print(samples)
+        [4.5678, 6.1234, 5.7890, 3.4567, 7.8901]
+
+        ### Sampling a tensor od realizations
+        >>> # Instantiate `Normal` and generate a tensor of realizations
+        >>> sampler = Normal(mean=-1.0, variance=0.25)
+        >>> # Sample a tensor with shape (2, 3)
+        >>> tensor_samples = sampler([2, 3])
+        >>> print(tensor_samples)
+        tensor([[-1.2345, -0.5678, -1.8901],
+                [-0.1234, -1.6789, -1.3456]])
+        """
+        # Extract parameters
+        mean = self.theta.get('mean', 0.0)
+        variance = self.theta.get('variance', 1.0)
+
+        # Compute standard deviation from variance
+        sigma = variance ** 0.5
+
+        # Re-initialize the distribution in case mean or variance has been updated
+        self.distribution = torch.distributions.Normal(loc=mean, scale=sigma)
+
+        # Validate `n` and determine output format
+        if n is None:
+            # Single scalar sample
+            sample = self.distribution.sample().item()
+            return sample
+        elif isinstance(n, int):
+            if n <= 0:
+                raise ValueError("`n` must be a positive integer.")
+            # List of samples
+            samples_tensor = self.distribution.sample((n,))
+            return samples_tensor.tolist()
+        elif isinstance(n, (list, tuple)):
+            if not all(isinstance(dim, int) and dim > 0 for dim in n):
+                raise ValueError("All elements in `n` must be positive integers.")
+            # Tensor of samples with specified shape
+            samples = self.distribution.sample(n)
+            return samples
+        else:
+            raise TypeError("`n` must be `None`, an `int`, or a `list`/`tuple` of `int`.")
