@@ -52,7 +52,7 @@ __all__ = [
     "FFT",
     "Uniform",
     "Bernoulli"
-    ]
+]
 
 import inspect
 import warnings
@@ -201,8 +201,9 @@ class TransformList(nn.Module):
         if not isinstance(probabilities, (list | tuple)):
             probabilities = [probabilities] * len(transforms)
         elif isinstance(probabilities, (list | tuple)):
-            assert len(transforms) == len(probabilities), \
-            "Transforms and probabilities must have the same length."
+            assert len(transforms) == len(probabilities), (
+                "Transforms and probabilities must have the same length."
+            )
         self.apply_transform_probs = [Bernoulli(p=p) for p in probabilities]
 
     def serialize(self) -> list:
@@ -554,7 +555,7 @@ class GaussianBlur(BaseTransform):
             input_tensor=input_tensor,
             kernel_size=self.kernel_size,
             sigma=self.sigma
-            )
+        )
 
 
 # TODO: Move to an augmentation package/repo?
@@ -575,7 +576,7 @@ class Resample(BaseTransform):
         p: float = 0.5,
         max_concurrent_subsamplings: int = None,
         mode: str = 'nearest',
-        ):
+    ):
         """
         Initialize the `Resample` module.
 

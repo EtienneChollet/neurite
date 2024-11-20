@@ -529,7 +529,7 @@ def subsample_tensor_random_dims(
         # Sometimes, you might try to define a `max_concurrent_subsamplings` that's not possible :(
         raise ValueError(
             f"Your tensor doesn't have {max_concurrent_subsamplings} dimensions!"
-            )
+        )
 
     # Sample the dimensions (to subsample) by randomly permuting the list of allowed dimensions and
     # taking the first `max_concurrent_subsamplings`
@@ -793,4 +793,4 @@ def randint(*args, **kwargs) -> torch.Tensor:
     if isinstance(shape, int):
         shape = (shape,)
 
-    return torch.randint(min, max+1, shape)
+    return torch.randint(min, max + 1, shape)
