@@ -153,7 +153,11 @@ class TransformList(nn.Module):
     """
     A container for serializing a list of transformations inheriting from `BaseTransform`.
     """
-    def __init__(self, transforms: nn.ModuleList):
+    def __init__(
+        self,
+        transforms: nn.ModuleList,
+        probabilities: Union[list, float, int] = 1
+    ):
         """
         Initialize the `TransformList`.
 
@@ -161,6 +165,8 @@ class TransformList(nn.Module):
         ----------
         transforms : nn.ModuleList
             A list of transformations inheriting from `BaseTransform`.
+        probabilities : list
+            A list of probabilities (one for each transform) for applying the transform.
 
         Examples
         --------
@@ -182,23 +188,40 @@ class TransformList(nn.Module):
         ### Modify a tensor with the transforms
         >>> input_tensor = torch.randn(1, 1, 32, 32, 32)
         >>> transformed_tensor = transforms(input_tensor)
+
+        ### Apply transforms with given probabilities
+        >>> # e.g. we want to apply gaussian blurring a lot, but resample much less.
+        >>> transforms = [GaussianBlur(), Resample()]
+        >>> probabilities = [0.95, 0.1]
+        >>> transforms = TransformList(transforms, probs)
         """
         super().__init__()
         self.transforms = transforms
+        if not isinstance(probabilities, (list | tuple)):
+            probabilities = [probabilities] * len(transforms)
+        elif isinstance(probabilities, (list | tuple)):
+            assert len(transforms) == len(probabilities), \
+            "Transforms and probabilities must have the same length."
+        self.apply_transform_probs = [Bernoulli(p=p) for p in probabilities]
 
     def serialize(self) -> list:
         """
-        Serializes the list of transformations into a list of dictionaries.
+        Serializes the list of transformations into a list of dictionaries, including their
+        applying probabilities.
 
         Returns
         -------
         list
-            A list of serialized transformations.
+            A list of dictionaries, each containing the serialized transform and its
+            associated applying probability.
         """
         serialized_transforms = []
-        for transform in self.transforms:
+        for transform, apply_prob in zip(self.transforms, self.apply_transform_probs):
             if hasattr(transform, 'serialize') and callable(transform.serialize):
-                serialized_transforms.append(transform.serialize())
+                serialized_transforms.append({
+                    "transform": transform.serialize(),
+                    "apply_probability": apply_prob.theta['p']
+                })
             else:
                 raise ValueError(
                     f"Transform {type(transform).__name__} does not support serialization."
@@ -223,7 +246,8 @@ class TransformList(nn.Module):
 
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
-        Sequentially applies all transformations in the list to the input tensor.
+        Sequentially applies all transformations in the list with a given probability to the input
+        tensor.
 
         Parameters
         ----------
@@ -235,8 +259,11 @@ class TransformList(nn.Module):
         torch.Tensor
             The transformed tensor.
         """
-        for transform in self.transforms:
-            input_tensor = transform(input_tensor)
+        for transform, apply_prob in zip(self.transforms, self.apply_transform_probs):
+            # Sample a binary decision to apply a particular transform or not
+            apply_transform = apply_prob().item()
+            if apply_transform:
+                input_tensor = transform(input_tensor)
         return input_tensor
 
 
