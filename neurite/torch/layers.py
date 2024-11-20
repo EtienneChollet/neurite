@@ -23,6 +23,8 @@ implied. See the License for the specific language governing permissions and lim
 the License.
 """
 __all__ = [
+    "register_init_arguments",
+    "BaseTransform",
     "Negate",
     "RescaleValues",
     "Resize",
@@ -51,12 +53,99 @@ __all__ = [
     "Bernoulli"
     ]
 
+import inspect
 import warnings
-from typing import Optional, Union, Tuple
+from typing import Optional, Union, Tuple, Callable
+from functools import wraps
 import torch
 from torch import nn
 import torch.nn.functional as F
 from . import utils
+from ..torch.random import Sampler
+
+
+def register_init_arguments(func: Callable) -> Callable:
+    """
+    Decorator to register initialization arguments into the instance's `arguments` dict.
+    It unpacks `**theta` and stores each parameter individually.
+    If a parameter is an instance of Sampler, it recursively registers its arguments.
+    """
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        # Call the original __init__ method
+        result = func(self, *args, **kwargs)
+
+        # Initialize the arguments dictionary if it doesn't exist
+        if not hasattr(self, 'arguments'):
+            self.arguments = {}
+
+        # Get the function's signature
+        sig = inspect.signature(func)
+
+        # Bind the passed arguments to the signature
+        bound = sig.bind(self, *args, **kwargs)
+        bound.apply_defaults()
+
+        # Extract parameters excluding 'self'
+        params = {k: v for k, v in bound.arguments.items() if k != 'self'}
+
+        # Unpack 'theta' if present
+        if 'theta' in params:
+            theta = params.pop('theta')
+            for key, value in theta.items():
+                # If the value is a Sampler instance, store its arguments recursively
+                if isinstance(value, Sampler):
+                    self.arguments[key] = value.serialize()  # Or value.arguments for direct args
+                else:
+                    self.arguments[key] = value
+
+        # Register the individual arguments
+        for key, value in params.items():
+            self.arguments[key] = value
+
+        return result
+    return wrapper
+
+
+class BaseTransform(nn.Module):
+    @register_init_arguments
+    def __init__(self, **theta):
+        """
+        Initializes the Sampler with given (arbitrary) parameters `theta`.
+
+        Parameters
+        ----------
+        **theta : Any
+            Arbitrary keyword arguments representing sampler parameters.
+        """
+        super().__init__()
+        self.theta = theta
+
+    def serialize(self) -> dict:
+        """
+        Serializes the object's state into a dictionary.
+
+        This method captures key attributes of the object and metadata about its
+        class and module for purposes such as taxonomy, reconstruction, or debugging.
+
+        Notes
+        -----
+        The `type` field captures the name of the immediate parent class, which
+        can be useful for hierarchical categorization. The `module` and `qualname`
+        fields ensure the object's origin can be traced and reconstructed if
+        necessary.
+        """
+        state_dict = {
+            # The qualified name of the class (for reconstruction purposes)
+            'qualname': self.__class__.__name__,
+            # Parent class, for more broad taxonomy/snapshot view
+            'parent': type(self).__bases__[0].__name__,
+            # The module that the sample may be found in (and reconstructed from)
+            'module': self.__module__,
+            # The sampler's parameters
+            'arguments': self.arguments,
+        }
+        return state_dict
 
 
 class Negate(nn.Module):
@@ -350,8 +439,9 @@ class GaussianBlur(nn.Module):
 
 
 # TODO: Move to an augmentation package/repo?
-class Resample(nn.Module):
+class Resample(BaseTransform):
     """
+
     A PyTorch module to resample a tensor.
 
     This module resamples the input tensor by a factor of `stride` along the
@@ -365,7 +455,7 @@ class Resample(nn.Module):
         forbidden_dims: Tuple[int, int] = (1, 0),
         p: float = 0.5,
         max_concurrent_subsamplings: int = None,
-        mode: str = 'nearest'
+        mode: str = 'nearest',
         ):
         """
         Initialize the `Resample` module.
@@ -379,7 +469,7 @@ class Resample(nn.Module):
                 - 's': Random strided subsampling with
                 `neurite.torch.utils.subsample_tensor_random_dims()`
                 - 'u': Interpolated upsampling with `neurite.torch.utils.upsample_tensor()`
-        stride : int or tuple, optional
+        stride : Sampler or int or tuple, optional
             The stride value to use when subsampling a given dimension. Can be an integer or
             a tuple corresponding to the range of strides to sample. By default, 2.
                 - A stride of 1 does not result in any subsampling.
@@ -426,13 +516,14 @@ class Resample(nn.Module):
         >>> print(input_tensor.shape)
         torch.Size([1, 1, 128, 128, 128])
         """
-        super().__init__()
-        self.operations = operations
-        self.stride = stride
-        self.forbidden_dims = forbidden_dims
-        self.p = p
-        self.max_concurrent_subsamplings = max_concurrent_subsamplings
-        self.mode = mode
+        super().__init__(
+            operations=operations,
+            stride=stride,
+            forbidden_dims=forbidden_dims,
+            p=p,
+            max_concurrent_subsamplings=max_concurrent_subsamplings,
+            mode=mode,
+        )
 
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
@@ -443,15 +534,15 @@ class Resample(nn.Module):
         original_spatial_shape = input_tensor.shape[2:]
 
         # Iterate through the sequence of operation aliases and apply each in order
-        for i, operation in enumerate(self.operations):
+        for i, operation in enumerate(self.theta.get('operations')):
             if operation == 's':
                 # Apply subsampling
                 resampled_tensor = utils.subsample_tensor_random_dims(
                     input_tensor=resampled_tensor,
-                    stride=self.stride,
-                    forbidden_dims=self.forbidden_dims,
-                    p=self.p,
-                    max_concurrent_subsamplings=self.max_concurrent_subsamplings
+                    stride=self.theta.get('stride'),
+                    forbidden_dims=self.theta.get('forbidden_dims'),
+                    p=self.theta.get('p'),
+                    max_concurrent_subsamplings=self.theta.get('max_concurrent_subsamplings')
                 )
             elif operation == 'u':
                 # Apply upsampling
