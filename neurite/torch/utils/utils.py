@@ -40,6 +40,7 @@ __all__ = [
 
 import torch
 import torch.nn.functional as F
+from neurite.torch.random import Fixed, RandInt
 
 
 def identity(input_argument):
@@ -449,9 +450,13 @@ def subsample_tensor_random_dims(
     ----------
     input_tensor : torch.Tensor
         The input tensor to be subsampled. Assumed to have batch and channel dimensions.
-    stride : int, optional
-        The stride value to use when subsampling each selected dimension. Can be an integer or a
-        tuple corresponding to the range of strides to sample. By default, 2.
+    stride : Sampler or int or tuple optional
+        The stride value to use when subsampling a given dimension. Can be Sampler, int, or tuple
+        corresponding to the range of strides to sample. By default, 2.
+            - When stride is an int, the stride is considered to be fixed
+            - When the stride is a tuple of two elements, the elements correspond to the upper and
+            lower bounds of a uniformly distributed integer sampler.
+            - When a sampler is passed, use that sampler to sample the strides at each calll
             - A stride of 1 does not result in any subsampling.
             - A stride of 2 will reduce the elements of the selected dimension by 1/2.
     forbidden_dims : list, optional
@@ -530,21 +535,16 @@ def subsample_tensor_random_dims(
         returns='successes'
     )
 
-    # If the stride is an int, we want to define the lower bound to be at least 2
+    # If the stride is an int we'll set it to be a fixed sampler.
     # This prevents us from trying to stride 0 elements (not possible), and one element (no effect).
-    if isinstance(stride, int):
-        stride = (2, stride)
-        if stride[0] == stride[1]:
-            # The stride will just be an integer
-            stride = stride[0]
-            stride_sampler = identity
+    if isinstance(stride, int | float):
+        stride_sampler = Fixed(stride)
     else:
-        # The stride will be a sampler
-        stride_sampler = randint
+        stride_sampler = RandInt.make(stride)
 
     # Perform the subsampling.
     for dimension in dimensions_to_subsample:
-        sampled_stride = stride_sampler(stride)
+        sampled_stride = stride_sampler()
         input_tensor = subsample_tensor(
             input_tensor,
             subsampling_dimension=dimension,
