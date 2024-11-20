@@ -25,6 +25,7 @@ the License.
 __all__ = [
     "register_init_arguments",
     "BaseTransform",
+    "TransformList",
     "Negate",
     "RescaleValues",
     "Resize",
