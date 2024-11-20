@@ -40,7 +40,7 @@ __all__ = [
 
 import torch
 import torch.nn.functional as F
-from neurite.torch.random import Fixed, RandInt
+from neurite.torch.random import Fixed, RandInt, Sampler
 
 
 def identity(input_argument):
@@ -50,10 +50,10 @@ def identity(input_argument):
 
 def soft_quantize(
     input_tensor: torch.Tensor,
-    nb_bins: int = 16,
-    softness: float = 1.0,
-    min_clip: float = -float('inf'),
-    max_clip: float = float('inf'),
+    nb_bins: Union[Sampler, int] = 16,
+    softness: Union[Sampler, int, float] = 1.0,
+    min_clip: Union[Sampler, int, float] = -float('inf'),
+    max_clip: Union[Sampler, int, float] = float('inf'),
     return_log: bool = False
 ) -> torch.Tensor:
     """
@@ -70,14 +70,14 @@ def soft_quantize(
     ----------
     input_tensor : torch.Tensor
         Input tensor to softly quantize.
-    nb_bins : int, optional
+    nb_bins : Sampler or int or float, optional
         The number of discrete bins to softly quantize the input values into. By default 16
-    softness : float, optional
+    softness : Sampler or int or float, optional
         The softness factor for quantization. A higher value gives smoother quantization.
         By default 1.0
-    min_clip : float, optional
+    min_clip : Sampler or int or float, optional
         Clip data lower than this value before calculating bin centers. By default -float('inf')
-    max_clip : float, optional
+    max_clip : Sampler or int or float, optional
         Clip data higher than this value before calculating bin centers. By default float('inf')
     return_log : bool, optional
         Optionally return the log of the softly quantized tensor. By default False
@@ -99,6 +99,12 @@ def soft_quantize(
     # Visualize the softly quantized tensor.
     >>> plt.imshow(softly_quantized_tensor[0, 0, 16])
     """
+    # Initialize and draw realizations from samplers from input arguments
+    nb_bins = Fixed.make(nb_bins)()
+    softness = Fixed.make(softness)()
+    min_clip = Fixed.make(min_clip)()
+    max_clip = Fixed.make(max_clip)()
+
     # Invert softness
     softness = 1 / softness
 
@@ -637,6 +643,19 @@ def make_range(*args, **kwargs) -> tuple:
     >>> print(rng)
     (0.6, 1)
     """
+    # Return arguments of type {Sampler, list, tuple} as-is
+    for arg in args:
+        if isinstance(arg, Sampler):
+            return arg
+        elif isinstance(arg, (list, tuple)):
+            return arg
+    # Return keyword arguments of type {Sampler, list, tuple} as-is
+    for arg in kwargs.values():
+        if isinstance(arg, Sampler):
+            return arg
+        elif isinstance(arg, (list, tuple)):
+            return arg
+
     # Setting default values
     min, max = 0, 1
     # Handle positional arguments
