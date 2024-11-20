@@ -149,6 +149,97 @@ class BaseTransform(nn.Module):
         return state_dict
 
 
+class TransformList(nn.Module):
+    """
+    A container for serializing a list of transformations inheriting from `BaseTransform`.
+    """
+    def __init__(self, transforms: nn.ModuleList):
+        """
+        Initialize the `TransformList`.
+
+        Parameters
+        ----------
+        transforms : nn.ModuleList
+            A list of transformations inheriting from `BaseTransform`.
+
+        Examples
+        --------
+        ### Initializing with transforms
+        >>> transforms = TransformList([GaussianBlur(), Resample()])
+        >>> # Get serialized state of list and print qualnames
+        >>> serialized_state = transforms.serialize()
+        >>> [i['qualname'] for i in serialized_state]
+        ['GaussianBlur', 'Resample']
+
+        ### Appending modules to the list
+        >>> # Now let's append a module to the list
+        >>> transforms.append(GaussianBlur())
+        >>> # Print each qualname now
+        >>> serialized_state = transforms.serialize()
+        >>> [i['qualname'] for i in serialized_state]
+        ['GaussianBlur', 'Resample', 'GaussianBlur']
+
+        ### Modify a tensor with the transforms
+        >>> input_tensor = torch.randn(1, 1, 32, 32, 32)
+        >>> transformed_tensor = transforms(input_tensor)
+        """
+        super().__init__()
+        self.transforms = transforms
+
+    def serialize(self) -> list:
+        """
+        Serializes the list of transformations into a list of dictionaries.
+
+        Returns
+        -------
+        list
+            A list of serialized transformations.
+        """
+        serialized_transforms = []
+        for transform in self.transforms:
+            if hasattr(transform, 'serialize') and callable(transform.serialize):
+                serialized_transforms.append(transform.serialize())
+            else:
+                raise ValueError(
+                    f"Transform {type(transform).__name__} does not support serialization."
+                )
+        return serialized_transforms
+
+    def append(self, transform: nn.Module):
+        """
+        Add a transform to the list.
+
+        Parameters
+        ----------
+        transform : nn.Module
+            A transform inheriting from `BaseTransform`.
+        """
+        if isinstance(transform, BaseTransform):
+            self.transforms.append(transform)
+        else:
+            raise TypeError(
+                f"Transform must inherit from BaseTransform, got {type(transform)} instead."
+            )
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Sequentially applies all transformations in the list to the input tensor.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            The input tensor to be transformed.
+
+        Returns
+        -------
+        torch.Tensor
+            The transformed tensor.
+        """
+        for transform in self.transforms:
+            input_tensor = transform(input_tensor)
+        return input_tensor
+
+
 class Negate(nn.Module):
     """
     A PyTorch module that returns the negative of the input tensor.
