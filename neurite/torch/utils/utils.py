@@ -38,6 +38,7 @@ __all__ = [
     'randint'
 ]
 
+from typing import Union
 import torch
 import torch.nn.functional as F
 from neurite.torch.random import Fixed, RandInt, Sampler
