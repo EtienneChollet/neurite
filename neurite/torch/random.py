@@ -387,12 +387,12 @@ class Sampler:
         necessary.
         """
         state_dict = {
+            # The qualified name of the class (for reconstruction purposes)
+            'qualname': self.__class__.__name__,
             # Parent class, for more broad taxonomy/snapshot view
-            'type': type(self).__bases__[0].__name__,
+            'parent': type(self).__bases__[0].__name__,
             # The module that the sample may be found in (and reconstructed from)
             'module': self.__module__,
-            # # The qualified name of the class (for reconstruction purposes)
-            'qualname': self.__class__.__name__,
             # The sampler's parameters
             'theta': self.theta,
         }
