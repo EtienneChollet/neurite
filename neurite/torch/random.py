@@ -10,6 +10,7 @@ __all__ = [
     'Bernoulli',
     'Poisson',
     'LogNormal',
+    'RandInt',
 ]
 
 from typing import Type, Dict, Any, TypeVar, Generator, List, Union, Tuple
@@ -859,4 +860,122 @@ class LogNormal(Sampler):
         distribution = torch.distributions.LogNormal(loc=mean, scale=sigma)
         # Sample from the distribution
         samples = distribution.sample(shape, **backend)
+        return samples
+
+
+class RandInt(Sampler):
+    """
+    Sampler that generates uniformly distributed random integers within a specified range.
+    """
+
+    def __init__(
+        self,
+        low: int = 0,
+        high: int = 10
+    ):
+        """
+        Sampler that generates uniformly distributed random integers within a specified range.
+
+        This sampler produces samples from a uniform integer distribution over the interval
+        `[low, high)`, where `low` is inclusive and `high` is exclusive. It leverages PyTorch's
+        random number generation capabilities to create the samples.
+
+        Parameters
+        ----------
+        low : int, optional
+            The lower bound of the sampling range (inclusive). Default is 0.
+        high : int, optional
+            The upper bound of the sampling range (exclusive). Must be greater than `low`.
+            Default is 10.
+
+        Attributes
+        ----------
+        theta : Dict[str, Any]
+            Dictionary storing the sampling parameters (`low` and `high`).
+
+        Returns
+        -------
+        Union[int, List[int], torch.Tensor]
+            The sampled realizations, varying in type based on `n` to __call__.
+
+        Examples
+        --------
+        ### Single realization
+        >>> # Instantiate `RandInt` with default range [0, 10)
+        >>> sampler = RandInt()
+        >>> # Single scalar sample
+        >>> sample = sampler()
+        >>> print(sample)
+        7
+
+        ### Multiple realizations as a list
+        >>> # Instantiate `RandInt` with custom range [5, 15)
+        >>> sampler = RandInt(low=5, high=15)
+        >>> # Generate 5 samples as a list
+        >>> samples = sampler(n=5)
+        >>> print(samples)
+        [12, 5, 9, 14, 7]
+
+        ### Tensor of realizations
+        >>> # Instantiate `RandInt` and generate a tensor of samples
+        >>> sampler = RandInt(low=100, high=200)
+        >>> # Generate a tensor with shape (2, 3)
+        >>> tensor_samples = sampler(n=[2, 3])
+        >>> print(tensor_samples)
+        tensor([[150, 123, 178],
+                [199, 101, 156]])
+    """
+    def __init__(
+        self,
+        low: int = 0,
+        high: int = 10
+    ):
+        """
+        Initializes the RandInt sampler with specified lower and upper bounds.
+
+        Parameters
+        ----------
+        low : int, optional
+            The inclusive lower bound of the integer range. Default is 0.
+        high : int, optional
+            The exclusive upper bound of the integer range. Must be greater than `low`.
+            Default is 10.
+
+        Raises
+        ------
+        TypeError
+            If `low` or `high` is not an integer.
+        ValueError
+            If `high` is not greater than `low`.
+        """
+        super().__init__(low=low, high=high)
+        # Validate parameters
+        if not isinstance(low, int):
+            raise TypeError(f"`low` must be an int, got {type(low).__name__}")
+        if not isinstance(high, int):
+            raise TypeError(f"`high` must be an int, got {type(high).__name__}")
+        if high <= low:
+            raise ValueError("`high` must be greater than `low`.")
+
+    def _sample(self, shape: list, **backend) -> torch.Tensor:
+        """
+        Generates samples from a uniform integer distribution based on `low` and `high`.
+
+        Parameters
+        ----------
+        shape : List[int]
+            The shape of the samples to generate.
+        **backend : Any
+            Additional keyword arguments for backend configurations (e.g., device, dtype).
+
+        Returns
+        -------
+        torch.Tensor
+            The generated samples as a tensor of integers within the range `[low, high)`.
+        """
+        # Extract parameters
+        low = self.theta.get('low', 0)
+        high = self.theta.get('high', 10)
+        # Generate samples using torch.randint
+        samples = torch.randint(low=low, high=high, size=shape, **backend)
         return samples
