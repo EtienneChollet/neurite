@@ -2,6 +2,7 @@
 Random (samplers) for the neurite project.
 """
 __all__ = [
+    'register_init_arguments',
     'ensure_list',
     'Sampler',
     'Uniform',
@@ -13,10 +14,55 @@ __all__ = [
     'RandInt',
 ]
 
-from typing import Type, Dict, Any, TypeVar, Generator, List, Union, Tuple
+import inspect
+from functools import wraps
+from typing import Type, Dict, Any, TypeVar, Generator, List, Union, Tuple, Callable
 import torch
 
 SamplerType = TypeVar('SamplerType', bound='Sampler')
+
+
+def register_init_arguments(func: Callable) -> Callable:
+    """
+    Decorator to register initialization arguments into the instance's `arguments` dict.
+    It unpacks `**theta` and stores each parameter individually.
+    If a parameter is an instance of Sampler, it recursively registers its arguments.
+    """
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        # Call the original __init__ method
+        result = func(self, *args, **kwargs)
+
+        # Initialize the arguments dictionary if it doesn't exist
+        if not hasattr(self, 'arguments'):
+            self.arguments = {}
+
+        # Get the function's signature
+        sig = inspect.signature(func)
+
+        # Bind the passed arguments to the signature
+        bound = sig.bind(self, *args, **kwargs)
+        bound.apply_defaults()
+
+        # Extract parameters excluding 'self'
+        params = {k: v for k, v in bound.arguments.items() if k != 'self'}
+
+        # Unpack 'theta' if present
+        if 'theta' in params:
+            theta = params.pop('theta')
+            for key, value in theta.items():
+                # If the value is a Sampler instance, store its arguments recursively
+                if isinstance(value, Sampler):
+                    self.arguments[key] = value.serialize()  # Or value.arguments for direct args
+                else:
+                    self.arguments[key] = value
+
+        # Register the individual arguments
+        for key, value in params.items():
+            self.arguments[key] = value
+
+        return result
+    return wrapper
 
 
 def ensure_list(x, size=None, crop=True, **kwargs):
@@ -44,6 +90,7 @@ class Sampler:
     Sampler classes only.
     """
 
+    @register_init_arguments
     def __init__(self, **theta):
         """
         Initializes the Sampler with given (arbitrary) parameters `theta`.
