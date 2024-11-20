@@ -50,8 +50,6 @@ __all__ = [
     "MeanStream",
     "CovStream",
     "FFT",
-    "Uniform",
-    "Bernoulli"
 ]
 
 import inspect
