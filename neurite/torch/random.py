@@ -7,7 +7,8 @@ __all__ = [
     'Uniform',
     'Fixed',
     'Normal',
-    'Bernoulli'
+    'Bernoulli',
+    'Poisson'
 ]
 
 from typing import Type, Dict, Any, TypeVar, Generator, List, Union, Tuple
@@ -683,3 +684,78 @@ class Bernoulli(Sampler):
         distribution = torch.distributions.Bernoulli(probs=p)
         samples = distribution.sample(shape).int()
         return samples
+
+
+class Poisson(Sampler):
+    """
+    Sampler that generates samples from a Poisson distribution with a specified rate parameter.
+    """
+
+    def __init__(self, rate: float = 1.0):
+        """
+        Sampler that generates samples from a Poisson distribution with a specified rate parameter.
+
+        This sampler produces samples from a Poisson distribution, where `rate` is the average rate
+        of occurrence of the event per interval.
+        Initialize the `Poisson` sampler with a specified rate parameter `rate`.
+
+        Parameters
+        ----------
+        rate : float, optional
+            The rate parameter (λ) of the Poisson distribution. Must be a positive value.
+            Default is 1.0.
+
+        Returns
+        -------
+        Union[int, List[int], torch.Tensor]
+            The sampled realizations, varying in type based on `n` to __call__.
+
+        Examples
+        --------
+        ### Single realization
+        >>> # Instantiate `Poisson` with rate=2.5
+        >>> sampler = Poisson(2.5)
+        >>> # Single scalar sample
+        >>> sample = sampler()
+        >>> print(sample)
+        3
+
+        ### Multiple realizations as a list
+        >>> # Generate 5 samples as a list
+        >>> samples = sampler(n=5)
+        >>> print(samples)
+        [2, 4, 3, 1, 5]
+
+        ### Tensor of realizations
+        >>> # Generate a tensor of samples with shape (2, 3)
+        >>> tensor_samples = sampler([2, 3])
+        >>> print(tensor_samples)
+        tensor([[2, 3, 1],
+                [4, 2, 5]])
+        """
+        super().__init__(rate=rate)
+        # Validate parameter
+        if not isinstance(rate, (int, float)):
+            raise TypeError(f"`rate` must be an int or float, got {type(rate).__name__}")
+        if rate <= 0:
+            raise ValueError("`rate` must be a positive value.")
+
+    def _sample(self, shape, **backend):
+        """
+        Generates samples from a Poisson distribution based on `rate`.
+
+        Parameters
+        ----------
+        shape : List[int]
+            The shape of the samples to generate.
+
+        Returns
+        -------
+        torch.Tensor
+            The generated samples as a tensor of integers.
+        """
+        # Extract parameter
+        rate = self.theta.get('rate')
+        distribution = torch.distributions.Poisson(rate=rate)
+        samples = distribution.sample(shape)
+        return samples.int()
