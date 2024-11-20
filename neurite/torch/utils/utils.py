@@ -220,8 +220,8 @@ def create_gaussian_kernel(
 
 def gaussian_smoothing(
     input_tensor: torch.Tensor,
-    kernel_size: int = 3,
-    sigma: float = 1,
+    kernel_size: Union[Sampler, int] = 3,
+    sigma: Union[Sampler, int, float] = 1,
 ) -> torch.Tensor:
     """
     Applies Gaussian smoothing to the {1D, 2D, 3D} input tensor based on the given kernel size and
@@ -231,9 +231,9 @@ def gaussian_smoothing(
     ----------
     input_tensor : torch.Tensor
         The input tensor, assumed to be 1D, 2D, or 3D.
-    kernel_size : int, optional
+    kernel_size : Sampler or int, optional
         Size of the Gaussian kernel, default is 3.
-    sigma : float, optional
+    sigma : Sampler or int or float, optional
         Standard deviation of the Gaussian kernel, default is 1.
 
     Returns
@@ -249,6 +249,11 @@ def gaussian_smoothing(
     # Smooth it
     >>> smoothed_tensor = gaussian_smoothing(input_tensor)
     """
+    # Sampling parameters
+    kernel_size = Fixed.make(kernel_size)()
+    sigma = Fixed.make(sigma)()
+    print(sigma)
+
     # Infer dimensionality in voxel/pixel space. Squeeze to remove batch and/or channel dims.
     ndim = input_tensor.squeeze().dim()
 
