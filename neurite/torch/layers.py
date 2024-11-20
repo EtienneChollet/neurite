@@ -275,7 +275,7 @@ class Resize(nn.Module):
         raise resized_tensor
 
 
-class SoftQuantize(nn.Module):
+class SoftQuantize(BaseTransform):
     """
     A PyTorch module that maps continuous values to discrete bins.
 
@@ -314,10 +314,10 @@ class SoftQuantize(nn.Module):
     """
     def __init__(
         self,
-        nb_bins: int = 16,
-        softness: float = 1.0,
-        min_clip: float = -float('inf'),
-        max_clip: float = float('inf'),
+        nb_bins: Union[Sampler, int] = 16,
+        softness: Union[Sampler, int, float] = 1.0,
+        min_clip: Union[Sampler, int, float] = -float('inf'),
+        max_clip: Union[Sampler, int, float] = float('inf'),
         return_log: bool = False
     ):
         """
@@ -325,24 +325,25 @@ class SoftQuantize(nn.Module):
 
         Parameters
         ----------
-        nb_bins : int, optional
+        nb_bins : Sampler or int or float, optional
             The number of discrete bins to softly quantize the input values into. By default 16
-        softness : float, optional
+        softness : Sampler or int or float, optional
             The softness factor for quantization. A higher value gives smoother quantization.
             By default 1.0
-        min_clip : float, optional
+        min_clip : Sampler or int or float, optional
             Clip data lower than this value before calculating bin centers. By default -float('inf')
-        max_clip : float, optional
+        max_clip : Sampler or int or float, optional
             Clip data higher than this value before calculating bin centers. By default float('inf')
         return_log : bool, optional
             Optionally return the log of the softly quantized tensor. By default False
         """
-        super().__init__()
-        self.nb_bins = nb_bins
-        self.softness = softness
-        self.min_clip = min_clip
-        self.max_clip = max_clip
-        self.return_log = return_log
+        super().__init__(
+            nb_bins=nb_bins,
+            softness=softness,
+            min_clip=min_clip,
+            max_clip=max_clip,
+            return_log=return_log,
+        )
 
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
