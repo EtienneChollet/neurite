@@ -8,7 +8,8 @@ __all__ = [
     'Fixed',
     'Normal',
     'Bernoulli',
-    'Poisson'
+    'Poisson',
+    'LogNormal',
 ]
 
 from typing import Type, Dict, Any, TypeVar, Generator, List, Union, Tuple
@@ -759,3 +760,103 @@ class Poisson(Sampler):
         distribution = torch.distributions.Poisson(rate=rate)
         samples = distribution.sample(shape)
         return samples.int()
+
+
+class LogNormal(Sampler):
+    """
+    Sampler that generates log-normally distributed floating-point numbers based on mean and
+    variance.
+    """
+
+    def __init__(
+        self,
+        mean: Union[int, float] = 0.0,
+        variance: Union[int, float] = 1.0
+    ):
+        """
+        Sampler that generates log-normally distributed floating-point numbers based on mean and
+        variance.
+
+        This sampler produces samples from a log-normal distribution, which is the distribution of a
+        random variable whose logarithm is normally distributed. It is defined by the parameters
+        `mean` and `variance`, where `mean` is the mean of the underlying normal distribution, and
+        `variance` is the standard deviation.
+
+        Parameters
+        ----------
+        mean : float or int, optional
+            The mean (`mu`) of the underlying normal distribution. Default is 0.0.
+        variance : float or int, optional
+            The standard deviation (`variance`) of the underlying normal distribution. Must be
+            positive. Default is 1.0.
+
+        Attributes
+        ----------
+        theta : Dict[str, Any]
+            Dictionary storing the sampling parameters (`mean` and `variance`).
+
+        Returns
+        -------
+        Union[float, List[float], torch.Tensor]
+            The sampled realizations, varying in type based on `n` to __call__.
+
+        Examples
+        --------
+        ### Single realization
+        >>> # Instantiate `LogNormal` with default parameters
+        >>> sampler = LogNormal()
+        >>> # Single scalar sample
+        >>> sample = sampler()
+        >>> print(sample)
+        1.234567890123456
+
+        ### Multiple realizations as a list
+        >>> # Instantiate `LogNormal` with custom mean and variance
+        >>> sampler = LogNormal(mean=0.5, variance=0.75)
+        >>> # Generate 5 samples as a list
+        >>> samples = sampler(n=5)
+        >>> print(samples)
+        [1.6487, 2.0138, 1.2840, 1.5623, 2.3456]
+
+        ### Tensor of realizations
+        >>> # Instantiate `LogNormal` and generate a tensor of samples
+        >>> sampler = LogNormal(mean=-0.5, variance=0.5)
+        >>> # Generate a tensor with shape (2, 3)
+        >>> tensor_samples = sampler(n=[2, 3])
+        >>> print(tensor_samples)
+        tensor([[0.6065, 1.2840, 0.7788],
+                [1.1052, 0.6065, 1.6487]])
+        """
+        super().__init__(mean=mean, variance=variance)
+        # Validate parameters
+        if not isinstance(mean, (int, float)):
+            raise TypeError(f"`mean` must be an int or float, got {type(mean).__name__}")
+        if not isinstance(variance, (int, float)):
+            raise TypeError(f"`variance` must be an int or float, got {type(variance).__name__}")
+        if variance <= 0:
+            raise ValueError("`variance` must be a positive value.")
+
+    def _sample(self, shape: list, **backend) -> torch.Tensor:
+        """
+        Generates samples from a LogNormal distribution based on `mean` and `variance`.
+
+        Parameters
+        ----------
+        shape : List[int]
+            The shape of the samples to generate.
+
+        Returns
+        -------
+        torch.Tensor
+            The generated samples as a tensor of positive floating-point numbers.
+        """
+        # Extract parameters
+        mean = self.theta.get('mean', 0.0)
+        variance = self.theta.get('variance', 1.0)
+        # Calculate sigma
+        sigma = variance ** 0.5
+        # Create LogNormal distribution
+        distribution = torch.distributions.LogNormal(loc=mean, scale=sigma)
+        # Sample from the distribution
+        samples = distribution.sample(shape, **backend)
+        return samples
