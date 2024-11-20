@@ -261,7 +261,6 @@ class Sampler:
         else:
             return super().__setattr__(item, value)
 
-
     def __call__(self, n=None, **backend):
         """
         Generates samples based on the sampler's parameters.
@@ -353,47 +352,6 @@ class Sampler:
 class Uniform(Sampler):
     """
     Sampler that generates uniformly distributed floating-point numbers within a specified range.
-
-    This sampler produces samples from a uniform distribution over the interval
-    `[min_val, max_val]`. It leverages PyTorch's random number generation capabilities to create
-    the samples.
-
-    Parameters
-    ----------
-    min_val : float or int, optional
-        The lower bound of the sampling range (inclusive). Default is 0.0.
-    max_val : float or int, optional
-        The upper bound of the sampling range (inclusive). Default is 1.0.
-
-    Attributes
-    ----------
-    theta : Dict[str, Any]
-        Dictionary storing the sampling parameters (`min_val` and `max_val`).
-
-    Examples
-    --------
-    >>> # Instantiate `Uniform` with default range [0.0, 1.0]
-    >>> sampler = Uniform()
-    >>> # Single scalar sample
-    >>> sample = sampler()
-    >>> print(sample)
-    0.5372732281684875
-
-    >>> # Instantiate `Uniform` with custom range [5, 10]
-    >>> sampler = Uniform(min_val=5, max_val=10)
-    >>> # Generate 5 samples as a list
-    >>> samples = sampler(n=5)
-    >>> print(samples)
-    [7.829, 5.123, 9.456, 6.789, 8.012]
-
-    >>> # Instantiate `Uniform` and generate a tensor of samples
-    >>> sampler = Uniform(min_val=-2.0, max_val=2.0)
-    >>> Sample a tensor with shape (3, 2)
-    >>> tensor_samples = sampler(n=[3, 2])
-    >>> print(tensor_samples)
-    tensor([[-1.2345,  0.5678],
-            [ 1.8901, -0.1234],
-            [ 0.4567,  1.2345]])
     """
 
     def __init__(
@@ -402,7 +360,12 @@ class Uniform(Sampler):
         max_val: Union[int, float] = 1.0
     ):
         """
-        Initialize `Uniform` with specified minimum and maximum values.
+        Sampler that generates uniformly distributed floating-point numbers within a specified
+        range.
+
+        This sampler produces samples from a uniform distribution over the interval
+        `[min_val, max_val]`. It leverages PyTorch's random number generation capabilities to create
+        the samples.
 
         Parameters
         ----------
@@ -410,45 +373,16 @@ class Uniform(Sampler):
             The lower bound of the sampling range (inclusive). Default is 0.0.
         max_val : float or int, optional
             The upper bound of the sampling range (inclusive). Default is 1.0.
-        """
-        super().__init__(min_val=min_val, max_val=max_val)
-        # Validate parameters
-        if not isinstance(min_val, (int, float)):
-            raise TypeError(f"`min_val` must be an int or float, got {type(min_val).__name__}")
-        if not isinstance(max_val, (int, float)):
-            raise TypeError(f"`max_val` must be an int or float, got {type(max_val).__name__}")
-        if max_val <= min_val:
-            raise ValueError("`max_val` must be greater than `min_val`.")
 
-    def __call__(
-        self,
-        n: Union[int, List[int], Tuple[int, ...]] = None,
-        **backend: Any
-    ) -> Union[float, List[float], torch.Tensor]:
-        """
-        Generates samples from a uniform distribution over the interval `[min_val, max_val]`.
-
-        Depending on the input parameter `n`, the method returns:
-            - A single scalar float if `n` is `None`.
-            - A list of floats if `n` is an integer.
-            - A PyTorch tensor of floats with the specified shape if `n` is a list or tuple of
-            integers.
-
-        Parameters
+        Attributes
         ----------
-        n : Union[int, List[int], Tuple[int, ...]], optional
-            The number of samples to generate.
-                - If `None`, returns a single scalar sample.
-                - If an `int`, returns a list of samples.
-                - If a `list` or `tuple` of `int`, returns a tensor of samples with the specified
-                shape.
-        **backend : Any
-            Additional keyword arguments to pass to the backend sampling implementation.
+        theta : Dict[str, Any]
+            Dictionary storing the sampling parameters (`min_val` and `max_val`).
 
         Returns
         -------
-        Union[float, List[float], torch.Tensor]
-            The generated samples, varying in type based on `n`.
+        Union[int, List[int], torch.Tensor]
+            The sampled realizations, varying in type based on `n` to __call__.
 
         Examples
         --------
@@ -475,130 +409,61 @@ class Uniform(Sampler):
                 [ 1.8901, -0.1234],
                 [ 0.4567,  1.2345]])
         """
+        super().__init__(min_val=min_val, max_val=max_val)
+        # Validate parameters
+        if not isinstance(min_val, (int, float)):
+            raise TypeError(f"`min_val` must be an int or float, got {type(min_val).__name__}")
+        if not isinstance(max_val, (int, float)):
+            raise TypeError(f"`max_val` must be an int or float, got {type(max_val).__name__}")
+        if max_val <= min_val:
+            raise ValueError("`max_val` must be greater than `min_val`.")
 
-        # Extract parameters
-        theta = self._ensure_same_length(self.theta, nsamples=n if isinstance(n, int) else None)
-        min_val = theta.get('min_val', 0.0)
-        max_val = theta.get('max_val', 1.0)
+    def _sample(self, shape: list, **backend) -> torch.Tensor:
+        """
+        Abstract method to sample from `Uniform`.
 
-        # Handle min_val and max_val being lists or scalars
-        if isinstance(min_val, list):
-            min_val = torch.tensor(min_val, dtype=torch.float32)
-        elif isinstance(min_val, tuple):
-            min_val = torch.tensor(min_val, dtype=torch.float32)
-        if isinstance(max_val, list):
-            max_val = torch.tensor(max_val, dtype=torch.float32)
-        elif isinstance(max_val, tuple):
-            max_val = torch.tensor(max_val, dtype=torch.float32)
+        Parameters
+        ----------
+        shape : List[int]
+            The shape of the samples to generate.
 
-        # Validate `n` and determine output format
-        if n is None:
-            # Single scalar sample
-            sample = torch.rand(1, **backend).item() * (max_val - min_val) + min_val
-            if isinstance(sample, torch.Tensor):
-                return sample.item()
-            return sample
-        elif isinstance(n, int):
-            if n <= 0:
-                raise ValueError("`n` must be a positive integer.")
-            # List of samples
-            samples_tensor = torch.rand(n, **backend) * (max_val - min_val) + min_val
-            if isinstance(min_val, torch.Tensor) and len(min_val.shape) > 0:
-                # Element-wise sampling if min_val and max_val are tensors
-                return samples_tensor.tolist()
-            else:
-                return samples_tensor.tolist()
-        elif isinstance(n, (list, tuple)):
-            if not all(isinstance(dim, int) and dim > 0 for dim in n):
-                raise ValueError("All elements in `n` must be positive integers.")
-            # Tensor of samples with specified shape
-            samples = torch.rand(*n, **backend) * (max_val - min_val) + min_val
-            return samples
-        else:
-            raise TypeError("`n` must be `None`, an `int`, or a `list`/`tuple` of `int`.")
+        Returns
+        -------
+        torch.Tensor
+            The generated samples as a tensor.
+        """
+        min_val = self.theta.get('min_val')
+        max_val = self.theta.get('max_val')
+        return torch.rand(*shape, **backend) * (max_val - min_val) + min_val
 
 
 class Fixed(Sampler):
     """
     Sampler that generates a fixed constant value.
-
-    This sampler always returns the same fixed value specified during initialization.
-    It can generate single scalar samples, lists of the fixed value, or tensors filled with the
-    fixed value based on the input parameter `n` in __call__.
-
-    Parameters
-    ----------
-    value : Any
-        The fixed value to return when sampling.
-
-    Examples
-    --------
-    ### Single realization
-    >>> # Instantiate `Fixed` with a fixed value of 5
-    >>> sampler = Fixed(value=5)
-    >>> # Single scalar sample
-    >>> sample = sampler()
-    >>> print(sample)
-    5
-
-    ### Listed/repeated realizations
-    >>> # Instantiate `Fixed` with a fixed value of 3.14
-    >>> sampler = Fixed(value=3.14)
-    >>> # Generate 4 samples as a list
-    >>> samples = sampler(n=4)
-    >>> print(samples)
-    [3.14, 3.14, 3.14, 3.14]
-
-    ### Tensor filled with realizations
-    >>> # Instantiate `Fixed` with a fixed value of -1
-    >>> sampler = Fixed(value=-1)
-    >>> # Generate a tensor of samples with shape (2, 3)
-    >>> tensor_samples = sampler(n=[2, 3])
-    >>> print(tensor_samples)
-    tensor([[-1, -1, -1],
-            [-1, -1, -1]])
     """
 
     def __init__(self, value: Any):
         """
-        Initialize the `Fixed` sampler with a specified fixed value.
+        Sampler that generates a fixed constant value.
+
+        This sampler always returns the same fixed value specified during initialization.
+        It can generate single scalar samples, lists of the fixed value, or tensors filled with the
+        fixed value based on the input parameter `n` in __call__.
 
         Parameters
         ----------
         value : Any
             The fixed value to return when sampling.
-        """
-        super().__init__(value=value)
 
-    def __call__(
-        self,
-        n: Union[int, List[int], Tuple[int, ...]] = None,
-        **backend: Any
-    ) -> Union[Any, List[Any], torch.Tensor]:
-        """
-        Generates fixed value samples.
-
-        Depending on the input parameter `n`, the method returns:
-            - The fixed value itself if `n` is `None`.
-            - A list containing the fixed value repeated `n` times if `n` is an integer.
-            - A PyTorch tensor filled with the fixed value with the specified shape if `n` is a
-              list or tuple of integers.
-
-        Parameters
+        Attributes
         ----------
-        n : Union[int, List[int], Tuple[int, ...]], optional
-            The number of samples to generate.
-                - If `None`, returns the fixed value itself.
-                - If an `int`, returns a list containing the fixed value repeated `n` times.
-                - If a `list` or `tuple` of `int`, returns a tensor filled with the fixed value
-                  with the specified shape.
-        **backend : Any
-            Additional keyword arguments to pass to the backend sampling implementation.
+        theta : Dict[str, Any]
+            Dictionary storing the sampling parameter `value`.
 
         Returns
         -------
-        Union[Any, List[Any], torch.Tensor]
-            The generated samples, varying in type based on `n`.
+        Union[int, List[int], torch.Tensor]
+            The sampled realizations, varying in type based on `n` to __call__.
 
         Examples
         --------
@@ -627,72 +492,30 @@ class Fixed(Sampler):
         tensor([[-1, -1, -1],
                 [-1, -1, -1]])
         """
-        # Retrieve the fixed value
-        value = self.theta.get('value')
+        super().__init__(value=value)
 
-        # Validate `n` and determine output format
-        if n is None:
-            # Single fixed value
-            return value
-        elif isinstance(n, int):
-            if n <= 0:
-                raise ValueError("`n` must be a positive integer.")
-            # List of fixed values
-            return [value for _ in range(n)]
-        elif isinstance(n, (list, tuple)):
-            if not all(isinstance(dim, int) and dim > 0 for dim in n):
-                raise ValueError("All elements in `n` must be positive integers.")
-            # Tensor filled with the fixed value with specified shape
-            try:
-                tensor_samples = torch.full(n, fill_value=value, **backend)
-                return tensor_samples
-            except Exception as e:
-                raise TypeError(f"Error creating tensor: {e}") from e
-        else:
-            raise TypeError("`n` must be `None`, an `int`, or a `list`/`tuple` of `int`.")
+    def _sample(self, shape: list, **backend) -> torch.Tensor:
+        """
+        Abstract method to sample from `Fixed`.
+
+        Parameters
+        ----------
+        shape : List[int]
+            The shape of the samples to generate.
+
+        Returns
+        -------
+        torch.Tensor
+            The generated samples as a tensor.
+        """
+        # Extract `value`
+        value = self.theta.get('value')
+        return torch.full(shape, fill_value=value, **backend)
 
 
 class Normal(Sampler):
     """
     Sampler that generates normally distributed floating-point numbers based on mean and variance.
-
-    This sampler produces samples from a normal (Gaussian) distribution defined by specified
-    `mean` and `variance` parameters.
-
-    Parameters
-    ----------
-    mean : float or int, optional
-        The mean of the normal distribution. Default is 0.0.
-    variance : float or int, optional
-        The variance of the normal distribution. Must be positive.
-        Default is 1.0.
-
-    Examples
-    --------
-    ### Default parameters
-    >>> # Instantiate `Normal` with default parameters
-    >>> sampler = Normal()
-    >>> # Single scalar sample
-    >>> sample = sampler()
-    >>> print(sample)
-    0.1234567890123456
-
-    ### Custom mean and variance
-    >>> # Instantiate `Normal` with custom mean and variance
-    >>> sampler = Normal(mean=5.0, variance=4.0)
-    >>> # Generate 5 samples as a list
-    >>> samples = sampler(5)
-    >>> print(samples)
-    [4.5678, 6.1234, 5.7890, 3.4567, 7.8901]
-
-    ### Sampling a tensor od realizations
-    >>> # Instantiate `Normal` and generate a tensor of realizations
-    >>> sampler = Normal(mean=-1.0, variance=0.25)
-    >>> # Sample a tensor with shape (2, 3)
-    >>> tensor_samples = sampler([2, 3])
-    >>> print(tensor_samples)
-    tensor([[-1.2345, -0.5678, -1.8901],
-            [-0.1234, -1.6789, -1.3456]])
     """
 
     def __init__(
@@ -701,7 +524,11 @@ class Normal(Sampler):
         variance: Union[int, float] = 1.0
     ):
         """
-        Initialize `Normal` with specified mean and variance.
+        Sampler that generates normally distributed floating-point numbers based on mean and
+        variance.
+
+        This sampler produces samples from a normal (Gaussian) distribution defined by specified
+        `mean` and `variance` parameters.
 
         Parameters
         ----------
@@ -710,51 +537,16 @@ class Normal(Sampler):
         variance : float or int, optional
             The variance of the normal distribution. Must be positive.
             Default is 1.0.
-        """
-        super().__init__(mean=mean, variance=variance)
-        # Validate parameters
-        if not isinstance(mean, (int, float)):
-            raise TypeError(f"`mean` must be an int or float, got {type(mean).__name__}")
-        if not isinstance(variance, (int, float)):
-            raise TypeError(f"`variance` must be an int or float, got {type(variance).__name__}")
-        if variance <= 0:
-            raise ValueError("`variance` must be positive.")
 
-        # Compute standard deviation from variance
-        sigma = variance ** 0.5
-
-        # Initialize the Normal distribution
-        self.distribution = torch.distributions.Normal(loc=mean, scale=sigma)
-
-    def __call__(
-        self,
-        n: Union[int, List[int], Tuple[int, ...]] = None,
-        **backend: Any
-    ) -> Union[float, List[float], torch.Tensor]:
-        """
-        Generates samples from a normal distribution based on mean and variance.
-
-        Depending on the input parameter `n`, the method returns:
-            - A single scalar float if `n` is `None`.
-            - A list of floats if `n` is an integer.
-            - A PyTorch tensor of floats with the specified shape if `n` is a list or tuple of
-              integers.
-
-        Parameters
+        Attributes
         ----------
-        n : Union[int, List[int], Tuple[int, ...]], optional
-            The number of samples to generate.
-                - If `None`, returns a single scalar sample.
-                - If an `int`, returns a list of samples.
-                - If a `list` or `tuple` of `int`, returns a tensor of samples with the specified
-                  shape.
-        **backend : Any
-            Additional keyword arguments to pass to the backend sampling implementation.
+        theta : Dict[str, Any]
+            Dictionary storing the sampling parameters (`mean` and `variance`).
 
         Returns
         -------
-        Union[float, List[float], torch.Tensor]
-            The generated samples, varying in type based on `n`.
+        Union[int, List[int], torch.Tensor]
+            The sampled realizations, varying in type based on `n` to __call__.
 
         Examples
         --------
@@ -783,125 +575,64 @@ class Normal(Sampler):
         tensor([[-1.2345, -0.5678, -1.8901],
                 [-0.1234, -1.6789, -1.3456]])
         """
-        # Extract parameters
+        super().__init__(mean=mean, variance=variance)
+        # Validate parameters
+        if not isinstance(mean, (int, float)):
+            raise TypeError(f"`mean` must be an int or float, got {type(mean).__name__}")
+        if not isinstance(variance, (int, float)):
+            raise TypeError(f"`variance` must be an int or float, got {type(variance).__name__}")
+        if variance <= 0:
+            raise ValueError("`variance` must be positive.")
+
+    def _sample(self, shape, **backend):
+        """
+        Abstract method to sample from `Normal`.
+
+        Parameters
+        ----------
+        shape : List[int]
+            The shape of the samples to generate.
+
+        Returns
+        -------
+        torch.Tensor
+            The generated samples as a tensor.
+        """
+        # Extract mean and var
         mean = self.theta.get('mean', 0.0)
         variance = self.theta.get('variance', 1.0)
-
-        # Compute standard deviation from variance
+        # Calculate sigma
         sigma = variance ** 0.5
-
-        # Re-initialize the distribution in case mean or variance has been updated
-        self.distribution = torch.distributions.Normal(loc=mean, scale=sigma)
-
-        # Validate `n` and determine output format
-        if n is None:
-            # Single scalar sample
-            sample = self.distribution.sample().item()
-            return sample
-        elif isinstance(n, int):
-            if n <= 0:
-                raise ValueError("`n` must be a positive integer.")
-            # List of samples
-            samples_tensor = self.distribution.sample((n,))
-            return samples_tensor.tolist()
-        elif isinstance(n, (list, tuple)):
-            if not all(isinstance(dim, int) and dim > 0 for dim in n):
-                raise ValueError("All elements in `n` must be positive integers.")
-            # Tensor of samples with specified shape
-            samples = self.distribution.sample(n)
-            return samples
-        else:
-            raise TypeError("`n` must be `None`, an `int`, or a `list`/`tuple` of `int`.")
+        distribution = torch.distributions.Normal(loc=mean, scale=sigma)
+        return distribution.sample(shape)
 
 
 class Bernoulli(Sampler):
     """
     Sampler that generates binary outcomes (0 or 1) based on a specified probability `p`.
-
-    This sampler produces samples from a Bernoulli distribution, where `p` is the
-    probability of success (resulting in 1), and `1 - p` is the probability of
-    failure (resulting in 0).
-
-    Parameters
-    ----------
-    p : float
-        The probability of realizing a success (i.e., the probability of sampling a 1) from the
-        By default, 0.5. Must be in the range [0, 1].
-
-    Examples
-    --------
-    ### Single realization
-    >>> # Instantiate `Bernoulli` with p=0.7
-    >>> sampler = Bernoulli(p=0.7)
-    >>> # Single scalar sample
-    >>> sample = sampler()
-    >>> print(sample)
-    1
-
-    ### Multiple realizations as a list
-    >>> # Generate 5 samples as a list
-    >>> samples = sampler(n=5)
-    >>> print(samples)
-    [1, 0, 1, 1, 0]
-
-    ### Tensor of realizations
-    >>> # Generate a tensor of samples with shape (2, 3)
-    >>> tensor_samples = sampler(n=[2, 3])
-    >>> print(tensor_samples)
-    tensor([[1, 0, 1],
-            [1, 1, 0]])
     """
 
     def __init__(self, p: float = 0.5):
         """
-        Initialize the `Bernoulli` sampler with a specified probability `p`.
+        This sampler generates samples from a Bernoulli distribution, where `p` is the
+        probability of success (resulting in 1), and `1 - p` is the probability of
+        failure (resulting in 0).
 
         Parameters
         ----------
-        p : float
-            The probability of realizing a success (i.e., the probability of sampling a 1) from the
-            By default, 0.5. Must be in the range [0, 1].
+        p : float, optional
+            Probability of realizing a success (i.e., the probability of a 1) from the Bernoulli
+            distribution. By default, 0.5. Must be in the range [0, 1].
 
-        """
-        super().__init__(p=p)
-        # Validate parameter
-        if not isinstance(p, (int, float)):
-            raise TypeError(f"`p` must be an int or float, got {type(p).__name__}")
-        if not 0 <= p <= 1:
-            raise ValueError("`p` must be between 0 and 1 inclusive.")
-
-        # Initialize the Bernoulli distribution
-        self.distribution = torch.distributions.Bernoulli(probs=p)
-
-    def __call__(
-        self,
-        n: Union[int, List[int], Tuple[int, ...]] = None,
-        **backend: Any
-    ) -> Union[int, List[int], torch.Tensor]:
-        """
-        Generates samples from a Bernoulli distribution based on probability `p`.
-
-        Depending on the input parameter `n`, the method returns:
-            - A single integer (0 or 1) if `n` is `None`.
-            - A list of integers if `n` is an integer.
-            - A PyTorch tensor of integers with the specified shape if `n` is a list
-              or tuple of integers.
-
-        Parameters
+        Attributes
         ----------
-        n : Union[int, List[int], Tuple[int, ...]], optional
-            The number of samples to generate.
-                - If `None`, returns a single scalar sample.
-                - If an `int`, returns a list of samples.
-                - If a `list` or `tuple` of `int`, returns a tensor of samples with
-                  the specified shape.
-        **backend : Any
-            Additional keyword arguments to pass to the backend sampling implementation.
+        theta : Dict[str, Any]
+            Dictionary storing the sampling parameter `p`.
 
         Returns
         -------
         Union[int, List[int], torch.Tensor]
-            The generated samples, varying in type based on `n`.
+            The sampled realizations, varying in type based on `n` to __call__.
 
         Examples
         --------
@@ -926,28 +657,29 @@ class Bernoulli(Sampler):
         tensor([[1, 0, 1],
                 [1, 1, 0]])
         """
+        super().__init__(p=p)
+        # Validate parameter
+        if not isinstance(p, (int, float)):
+            raise TypeError(f"`p` must be an int or float, got {type(p).__name__}")
+        if not 0 <= p <= 1:
+            raise ValueError("`p` must be between 0 and 1 inclusive.")
+
+    def _sample(self, shape, **backend):
+        """
+        Generates samples from a Bernoulli distribution based on probability `p`.
+
+        Parameters
+        ----------
+        shape : List[int]
+            The shape of the samples to generate.
+
+        Returns
+        -------
+        torch.Tensor
+            The generated samples as a tensor of 0s and 1s.
+        """
         # Extract parameter
         p = self.theta.get('p')
-
-        # Re-initialize the distribution in case p has been updated
-        self.distribution = torch.distributions.Bernoulli(probs=p)
-
-        # Validate `n` and determine output format
-        if n is None:
-            # Single scalar sample
-            sample = self.distribution.sample().item()
-            return int(sample)
-        elif isinstance(n, int):
-            if n <= 0:
-                raise ValueError("`n` must be a positive integer.")
-            # List of samples
-            samples_tensor = self.distribution.sample((n,))
-            return samples_tensor.int().tolist()
-        elif isinstance(n, (list, tuple)):
-            if not all(isinstance(dim, int) and dim > 0 for dim in n):
-                raise ValueError("All elements in `n` must be positive integers.")
-            # Tensor of samples with specified shape
-            samples = self.distribution.sample(n).int()
-            return samples
-        else:
-            raise TypeError("`n` must be `None`, an `int`, or a `list`/`tuple` of `int`.")
+        distribution = torch.distributions.Bernoulli(probs=p)
+        samples = distribution.sample(shape).int()
+        return samples
