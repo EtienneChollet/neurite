@@ -252,7 +252,6 @@ def gaussian_smoothing(
     # Sampling parameters
     kernel_size = Fixed.make(kernel_size)()
     sigma = Fixed.make(sigma)()
-    print(sigma)
 
     # Infer dimensionality in voxel/pixel space. Squeeze to remove batch and/or channel dims.
     ndim = input_tensor.squeeze().dim()
