@@ -66,9 +66,8 @@ from ..torch.random import Sampler
 
 def register_init_arguments(func: Callable) -> Callable:
     """
-    Decorator to register initialization arguments into the instance's `arguments` dict.
-    It unpacks `**theta` and stores each parameter individually.
-    If a parameter is an instance of Sampler, it recursively registers its arguments.
+    Decorator to register a function's (typically __init__) arguments into the instance's
+    `arguments` dictionary and set them as individual attributes.
     """
     @wraps(func)
     def wrapper(self, *args, **kwargs):
@@ -98,10 +97,12 @@ def register_init_arguments(func: Callable) -> Callable:
                     self.arguments[key] = value.serialize()  # Or value.arguments for direct args
                 else:
                     self.arguments[key] = value
+                setattr(self, key, value)  # Set as attribute
 
-        # Register the individual arguments
+        # Register the individual arguments and set them as attributes
         for key, value in params.items():
             self.arguments[key] = value
+            setattr(self, key, value)  # Set as attribute
 
         return result
     return wrapper
