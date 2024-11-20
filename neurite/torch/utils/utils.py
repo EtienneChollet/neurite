@@ -168,15 +168,19 @@ def mse_loss(input_tensor: torch.Tensor, target_tensor: torch.Tensor) -> torch.T
     return torch.mean((input_tensor - target_tensor) ** 2)
 
 
-def create_gaussian_kernel(kernel_size: int = 3, sigma: float = 1, ndim: int = 3) -> torch.Tensor:
+def create_gaussian_kernel(
+    kernel_size: Union[Sampler, int] = 3,
+    sigma: Union[Sampler, int, float] = 1,
+    ndim: int = 3
+) -> torch.Tensor:
     """
     Create a {1D, 2D, 3D} Gaussian kernel.
 
     Parameters
     ----------
-    kernel_size : int
+    kernel_size : Sampler or int, optional
         Size of Gaussian kernel. Default is 3.
-    sigma : float
+    sigma : Sampler or int or float, optional
         Standard deviation of the Gaussian kernel. Default is 1.
     ndim : int
         Dimensionality of the gaussian kernel. Default is 3.
@@ -195,6 +199,10 @@ def create_gaussian_kernel(kernel_size: int = 3, sigma: float = 1, ndim: int = 3
     >>> gaussian_kernel.shape()
     torch.Size([1, 1, 3, 3, 3])
     """
+    # Initialize and sample parameters
+    kernel_size = Fixed.make(kernel_size)()
+    sigma = Fixed.make(sigma)()
+
     # Create a coordinate grid centered at zero
     coords = torch.arange(kernel_size).float() - (kernel_size - 1) / 2
     grid = torch.stack(torch.meshgrid([coords] * ndim), -1)
