@@ -27,11 +27,12 @@ the License.
 """
 __all__ = [
     'random_crop',
+    'random_clip'
 ]
 
 from typing import Union, Tuple, List
 import torch
-from neurite.torch.random import RandInt, Sampler, Bernoulli, Uniform
+from neurite.torch.random import RandInt, Sampler, Bernoulli, Uniform, Fixed
 from neurite.torch.utils import utils
 
 
@@ -133,3 +134,81 @@ def random_crop(
             # Make the slice and override the current (presumably null) slice.
             slices[dim] = slice(translation, crop_size + translation)
     return input_tensor[slices]
+
+
+def random_clip(
+    input_tensor: torch.Tensor,
+    clip_min: Union[float, int, Sampler] = 0,
+    clip_max: Union[float, int, Sampler] = 1,
+    clip_prob: Union[float, int, Sampler] = 0.5,
+    seed: Union[int, Sampler] = None,
+) -> torch.Tensor:
+    """
+    Randomly clips the values in a tensor to a specified range with a given probability.
+
+    Parameters
+    ----------
+    input_tensor : torch.Tensor
+        The input tensor whose values may be clipped.
+    clip_min : Union[float, int, Sampler], optional
+        The minimum value for clipping. If a `Sampler` is provided, it is sampled dynamically.
+        By default, 0.
+    clip_max : Union[float, int, Sampler], optional
+        The maximum value for clipping. If a `Sampler` is provided, it is sampled dynamically.
+        By default, 1.
+    clip_prob : Union[float, int, Sampler], optional
+        The probability of applying the clipping operation. If a `Sampler` is provided, it is
+        sampled dynamically. By default, 0.5.
+    seed : Union[int, Sampler], optional
+        A seed value or a sampler for reproducibility. Default is None.
+
+    Returns
+    -------
+    torch.Tensor
+        The tensor, clipped based on the specified parameters, or unchanged if the clipping
+        operation is not applied.
+
+    Examples
+    --------
+    ### Fixed range clipping
+    >>> input_tensor = torch.tensor([1.5, -0.5, 3.0])
+    >>> clipped_tensor = random_clip(input_tensor, clip_min=0, clip_max=1)
+    >>> print(clipped_tensor)
+    tensor([1.0, 0.0, 1.0])
+
+    ### Dynamic range clipping
+    >>> from my_samplers import UniformSampler
+    >>> input_tensor = torch.tensor([1.5, -0.5, 3.0])
+    >>> clipped_tensor = random_clip(
+                            input_tensor,
+                            clip_min=UniformSampler(0, 0.5), 
+                            clip_max=UniformSampler(1.5, 2.0)
+                        )
+    >>> print(clipped_tensor)
+    tensor([1.5000, 0.1732, 1.6281])
+
+    ### Reproducibility with a seed
+    >>> input_tensor = torch.tensor([1.5, -0.5, 3.0])
+    >>> clipped_tensor1 = random_clip(input_tensor, clip_min=0, clip_max=1, seed=42)
+    >>> clipped_tensor2 = random_clip(input_tensor, clip_min=0, clip_max=1, seed=42)
+    >>> print(clipped_tensor1 is clipped_tensor2)
+    True
+    """
+    # If prob is a sampler, sample from it
+    if isinstance(clip_prob, Sampler):
+        clip_prob = clip_prob()
+    # Make prob into a Bernoulli distribution
+    clip_prob = Bernoulli.make(clip_prob)
+    # Sample Bernoulli trial to determine whether to clip
+    if bool(clip_prob()):
+        # Initialize random seed if provided
+        if seed is not None:
+            torch.manual_seed(seed)
+        # If `clip_min` is float, interpret it as a fixed minimum for clipping (clipping floor).
+        clip_min = Fixed.make(clip_min)
+        # If `clip_max` is float, interpret it as a fixed maximum for clipping (clipping ceiling).
+        clip_max = Fixed.make(clip_max)
+        # Sample and apply clips
+        return input_tensor.clip_(clip_min(), clip_max())
+    else:
+        return input_tensor
