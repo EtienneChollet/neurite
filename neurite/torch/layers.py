@@ -733,24 +733,71 @@ class RandomCrop(nn.Module):
 
 
 # TODO: Move to an augmentation package/repo?
-class RandomClip(nn.Module):
+class RandomClip(BaseTransform):
     """
-    A PyTorch module that randomly clips elements outside the bounds.
+    A PyTorch module that randomly clips tensor elements outside the bounds.
 
-    Randomly select elements within a tensor using Brenouli sampling, and clip values falling
-    outside the (exclusive) range [`clip_min`, `clip_max`].
+    Examples
+    --------
+    ### Initialize the `RandomClip` module and apply it to a tensor:
+    >>> transform = RandomClip(clip_min=0.1, clip_max=0.9, clip_prob=0.5)
+    >>> input_tensor = torch.randn(3, 3)
+    >>> output_tensor = transform(input_tensor)
+    >>> print(output_tensor)
+
+    ### Use a sampler for dynamic clipping bounds:
+    >>> from my_samplers import UniformSampler
+    >>> transform = RandomClip(clip_min=UniformSampler(0, 0.5), clip_max=UniformSampler(0.5, 1.0))
+    >>> output_tensor = transform(input_tensor)
+    >>> print(output_tensor)
     """
-    def __init__(self):
+
+    def __init__(
+        self,
+        clip_min: Union[float, int, Sampler] = 0,
+        clip_max: Union[float, int, Sampler] = 1,
+        clip_prob: Union[float, int, Sampler] = 0.5,
+        seed: Union[int, Sampler] = None,
+    ):
         """
-        Initialize the `RandomClip` module.
+        Initialize `RandomClip` with specified clipping bounds and sampling probability.
+
+        Parameters
+        ----------
+        clip_min : Union[float, int, Sampler], optional
+            The lower bound for clipping. Elements less than `clip_min` are set to `clip_min`.
+            Defaults to 0.
+        clip_max : Union[float, int, Sampler], optional
+            The upper bound for clipping. Elements greater than `clip_max` are set to `clip_max`.
+            Defaults to 1.
+        clip_prob : Union[float, int, Sampler], optional
+            Probability of applying the clipping transformation. Defaults to 0.5.
+        seed : Union[int, Sampler], optional
+            Seed for random number generation to ensure reproducibility. Defaults to None.
         """
-        super().__init__()
+        super().__init__(clip_min=clip_min, clip_max=clip_max, clip_prob=clip_prob, seed=seed)
 
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
         Performs the forward pass of the `RandomClip` module.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            The input tensor to be clipped.
+
+        Returns
+        -------
+        torch.Tensor
+            The clipped tensor (if Bernoulli trial defined by parameter `clip_prob` is successful).
         """
-        raise NotImplementedError("The `RandomClip` module isn't ready yet :(")
+        return utils.random_clip(
+            input_tensor=input_tensor,
+            clip_min=self.clip_min,
+            clip_max=self.clip_max,
+            clip_prob=self.clip_prob,
+            seed=self.seed
+        )
 
 
 # TODO: Move to an augmentation package/repo?
