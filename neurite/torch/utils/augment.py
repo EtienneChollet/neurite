@@ -109,7 +109,6 @@ def random_crop(
         prob = prob()
     # Make prob into a Bernoulli distribution
     prob = Bernoulli.make(prob)
-    print(prob.serialize())
     # Make empty list of slices which we will modufy
     slices = [slice(None)] * input_tensor.dim()
     # I think `translation_min` will always be zero. Keep it as such.
