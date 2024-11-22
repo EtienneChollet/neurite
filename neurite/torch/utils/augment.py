@@ -104,8 +104,12 @@ def random_crop(
     allowed_dims = [x for x in range(input_tensor.dim()) if x not in forbidden_dims]
     # If `crop_proportion` is float, interpret it as upper bound of uniform distribution.
     crop_sampler = Uniform.make(utils.make_range(0, crop_proportion))
+    # If prob is a sampler, sample from it
+    if isinstance(prob, Sampler):
+        prob = prob()
     # Make prob into a Bernoulli distribution
     prob = Bernoulli.make(prob)
+    print(prob.serialize())
     # Make empty list of slices which we will modufy
     slices = [slice(None)] * input_tensor.dim()
     # I think `translation_min` will always be zero. Keep it as such.
@@ -116,7 +120,8 @@ def random_crop(
         if bool(prob):
             # Determine the size of this dimension
             dim_size = input_tensor.shape[dim]
-            # Sample random proportion of dimension to crop and convert to a point along the axis.
+            # Sample a random proportion of the dimension to crop and convert it to a point along
+            # the axis.
             crop_size = round((1 - crop_sampler()) * dim_size)
             # Calculate the maximum translation to avoid going out of bounds.
             translation_max = dim_size - crop_size
