@@ -394,7 +394,7 @@ class Sampler:
             # The module that the sample may be found in (and reconstructed from)
             'module': self.__module__,
             # The sampler's parameters
-            'theta': self.theta,
+            'theta': self.arguments,
         }
         return state_dict
 
@@ -714,7 +714,7 @@ class Bernoulli(Sampler):
         if not 0 <= p <= 1:
             raise ValueError("`p` must be between 0 and 1 inclusive.")
 
-    def _sample(self, shape, **backend):
+    def _sample(self, shape, returns: torch.dtype = torch.int, **backend):
         """
         Generates samples from a Bernoulli distribution based on probability `p`.
 
@@ -731,7 +731,7 @@ class Bernoulli(Sampler):
         # Extract parameter
         p = self.theta.get('p')
         distribution = torch.distributions.Bernoulli(probs=p)
-        samples = distribution.sample(shape).int()
+        samples = distribution.sample(shape).to(returns)
         return samples
 
 
