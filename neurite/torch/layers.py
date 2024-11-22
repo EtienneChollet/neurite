@@ -108,15 +108,25 @@ def register_init_arguments(func: Callable) -> Callable:
 
 
 class BaseTransform(nn.Module):
+    """
+    Base class for tensor transformations, containing arbitrary parameters `theta` and
+    serialization logic.
+
+    This class provides a foundation for implementing customizable and easily communicable
+    transformations by allowing arbitrary parameters (`theta`) to be passed during
+    initialization. It also supports serialization of its state, enabling metadata extraction
+    and facilitating reconstruction of instances.
+    """
+
     @register_init_arguments
     def __init__(self, **theta):
         """
-        Initializes the Sampler with given (arbitrary) parameters `theta`.
+        Initialize the transformation with arbitrary parameters.
 
         Parameters
         ----------
         **theta : Any
-            Arbitrary keyword arguments representing sampler parameters.
+            Arbitrary keyword arguments representing transformation parameters.
         """
         super().__init__()
         self.theta = theta
@@ -125,15 +135,20 @@ class BaseTransform(nn.Module):
         """
         Serializes the object's state into a dictionary.
 
-        This method captures key attributes of the object and metadata about its
-        class and module for purposes such as taxonomy, reconstruction, or debugging.
+        This method captures key attributes of the object and metadata about its class and module
+        for purposes such as taxonomy, reconstruction, or debugging.
 
-        Notes
-        -----
-        The `type` field captures the name of the immediate parent class, which
-        can be useful for hierarchical categorization. The `module` and `qualname`
-        fields ensure the object's origin can be traced and reconstructed if
-        necessary.
+        Returns
+        -------
+        dict
+            A dictionary containing the following fields:
+            - `qualname` (str): Fully qualified name of the class, useful for reconstructing the
+               object.
+            - `parent` (str): Name of the immediate parent class, useful for hierarchical taxonomy
+               or debugging.
+            - `module` (str): Module name where the class is defined, for locating and
+               reconstructing the object.
+            - `arguments` (dict): The arbitrary parameters (`theta`) passed during initialization.
         """
         state_dict = {
             # The qualified name of the class (for reconstruction purposes)
@@ -150,22 +165,28 @@ class BaseTransform(nn.Module):
 
 class TransformList(nn.Module):
     """
-    A container for serializing a list of transformations inheriting from `BaseTransform`.
+    A container for managing, serializing, and applying a sequence of transformations
+    that inherit from `BaseTransform`. Each transformation is applied with a global or
+    independent probability drawn from iid Bernoulli trials.
     """
+
     def __init__(
         self,
         transforms: nn.ModuleList,
         probabilities: Union[list, float, int] = 1
     ):
         """
-        Initialize the `TransformList`.
+        Initialize the `TransformList` with a list of transformations and their corresponding
+        probabilities.
 
         Parameters
         ----------
         transforms : nn.ModuleList
             A list of transformations inheriting from `BaseTransform`.
         probabilities : list
-            A list of probabilities (one for each transform) for applying the transform.
+            A single probability or list of probabilities for applying each transform. If a single
+            probability is provided, it is applied uniformly to all transforms. By default 1,
+            meaning all transforms are always applied.
 
         Examples
         --------
@@ -195,19 +216,24 @@ class TransformList(nn.Module):
         >>> transforms = TransformList(transforms, probs)
         """
         super().__init__()
+        # Assign instance attribute
         self.transforms = transforms
+        # If global probability is defined, make it into list equal to the length of the transforms
         if not isinstance(probabilities, (list | tuple)):
+            # Will resilt in a list of identically distributed Bernoulli trials
             probabilities = [probabilities] * len(transforms)
+        # If probabilities is a list but not length is not equal to transforms, we have a problem!
         elif isinstance(probabilities, (list | tuple)):
             assert len(transforms) == len(probabilities), (
                 "Transforms and probabilities must have the same length."
             )
+        # Make a list of independent Bernoulli trials associated with the respective transform
         self.apply_transform_probs = [Bernoulli(p=p) for p in probabilities]
 
     def serialize(self) -> list:
         """
-        Serializes the list of transformations into a list of dictionaries, including their
-        applying probabilities.
+        Serializes the list of transformations into a list of dictionaries, including their applying
+        probabilities.
 
         Returns
         -------
@@ -215,7 +241,9 @@ class TransformList(nn.Module):
             A list of dictionaries, each containing the serialized transform and its
             associated applying probability.
         """
+        # Container that we will sequentially populate with serialized transfomations
         serialized_transforms = []
+        # Iterate through the transformations and corresponding Bernoulli samplers
         for transform, apply_prob in zip(self.transforms, self.apply_transform_probs):
             if hasattr(transform, 'serialize') and callable(transform.serialize):
                 serialized_transforms.append({
