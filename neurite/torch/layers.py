@@ -220,11 +220,11 @@ class BaseTransform(nn.Module):
         elif self.share == 'channel':
             # Initialize a list to hold transformed batch elements
             transformed = []
-            for i in range(input_tensor.shape[0]):
+            for i in range(input_tensor.shape[1]):  # Loop over batch elements
                 # Select the i-th batch element
-                batch_element = input_tensor[i]
+                batch_element = input_tensor[:, i].unsqueeze(0).unsqueeze(0)
                 # Apply the transformation
-                transformed_element = self.transform(batch_element)
+                transformed_element = self.transform(batch_element)[0, 0]
                 transformed.append(transformed_element)
             # Stack the transformed elements back into a tensor
             return torch.stack(transformed, dim=1)
@@ -233,8 +233,8 @@ class BaseTransform(nn.Module):
         elif self.share == 'batch':
             transformed_channels = []
             for minibatch in range(input_tensor.shape[0]):
-                channel = input_tensor[minibatch]
-                transformed_channel = self.transform(channel)
+                channel = input_tensor[minibatch].unsqueeze(0)
+                transformed_channel = self.transform(channel)[0]
                 transformed_channels.append(transformed_channel)
             # Stack the transformed channels back into a tensor along channel dimension
             return torch.stack(transformed_channels, dim=0)
@@ -248,9 +248,9 @@ class BaseTransform(nn.Module):
                 transformed_channels = []
                 for c in range(input_tensor.shape[1]):
                     # Select the (i, c)-th channel
-                    channel = input_tensor[i, c]
+                    channel = input_tensor[i, c].unsqueeze(0).unsqueeze(0)
                     # Apply the transformation
-                    transformed_channel = self.transform(channel)
+                    transformed_channel = self.transform(channel)[0][0]
                     transformed_channels.append(transformed_channel)
                 # Stack the transformed channels back into a tensor for the i-th batch element
                 transformed_element = torch.stack(transformed_channels, dim=0)
