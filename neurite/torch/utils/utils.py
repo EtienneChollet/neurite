@@ -225,7 +225,7 @@ def gaussian_smoothing(
 ) -> torch.Tensor:
     """
     Applies Gaussian smoothing to the {1D, 2D, 3D} input tensor based on the given kernel size and
-    sigma.
+    sigma. Assumes tensor has a batch and channel dimension.
 
     Parameters
     ----------
@@ -254,7 +254,7 @@ def gaussian_smoothing(
     sigma = Fixed.make(sigma)()
 
     # Infer dimensionality in voxel/pixel space. Squeeze to remove batch and/or channel dims.
-    ndim = input_tensor.squeeze().dim()
+    ndim = input_tensor.dim() - 2
 
     # Initialize the gaussian kernel
     gaussian_kernel = create_gaussian_kernel(
@@ -265,7 +265,7 @@ def gaussian_smoothing(
 
     # Calculate padding size
     padding = kernel_size // 2
-    # Make the padding symmetric and 
+    # Make the padding symmetric and
     padding = torch.tensor(padding).repeat(ndim * 2)
     # Convert to tuple (F.pad takes a tuple of ints, not tensors)
     padding = tuple(padding.tolist())
