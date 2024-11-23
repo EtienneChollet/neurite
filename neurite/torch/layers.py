@@ -116,20 +116,38 @@ class BaseTransform(nn.Module):
     transformations by allowing arbitrary parameters (`theta`) to be passed during
     initialization. It also supports serialization of its state, enabling metadata extraction
     and facilitating reconstruction of instances.
+
+    Attributes
+    ----------
+    share : Union[bool, str]
+        Strategy for sharing transformations.
+        - `True`: Apply the same transformation to the entire tensor.
+        - `'channel'`: Apply the same transformation across channels for each batch element.
+        - `'batch'`: Apply the same transformation across the batch for each channel.
+        - `False`: Apply distinct transformations for each channel of each batch element.
+    theta : Dict[str, Any]
+        Arbitrary parameters for the transformation.
     """
 
     @register_init_arguments
-    def __init__(self, **theta):
+    def __init__(self, share: Union[bool, str] = True, **theta):
         """
         Initialize the transformation with arbitrary parameters.
 
         Parameters
         ----------
+        share : Union[bool, str], optional
+            Sharing strategy, by default `True`.
+            - `True`: Share across all dimensions.
+            - `'channel'`: Share across the channel dimension.
+            - `'batch'`: Share across the batch dimension.
+            - `False`: No sharing (individual transformations).
         **theta : Any
             Arbitrary keyword arguments representing transformation parameters.
         """
         super().__init__()
         self.theta = theta
+        self.share = share
 
     def serialize(self) -> dict:
         """
@@ -161,6 +179,86 @@ class BaseTransform(nn.Module):
             'arguments': self.arguments,
         }
         return state_dict
+
+    def transform(self, input_tensor: torch.Tensor):
+        """
+        Define and apply the transformation to the input tensor.
+
+        This method should be overridden by subclasses to implement specific transformations.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            The input tensor to transform.
+
+        Returns
+        -------
+        torch.Tensor
+            The transformed tensor.
+        """
+        raise NotImplementedError("`BaseTransform` is not a valid transform :(")
+
+    def forward(self, input_tensor: torch.Tensor):
+        """
+        Forward pass of `BaseTransform`
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            The input tensor to transform.
+
+        Returns
+        -------
+        torch.Tensor
+            The transformed tensor.
+        """
+        # Case 1: Apply the same transformation to the entire tensor
+        if self.share is True:
+            return self.transform(input_tensor)
+
+        # Case 2: Apply different transformations to each batch element, same across channels
+        elif self.share == 'channel':
+            # Initialize a list to hold transformed batch elements
+            transformed = []
+            for i in range(input_tensor.shape[0]):
+                # Select the i-th batch element
+                batch_element = input_tensor[i]
+                # Apply the transformation
+                transformed_element = self.transform(batch_element)
+                transformed.append(transformed_element)
+            # Stack the transformed elements back into a tensor
+            return torch.stack(transformed, dim=1)
+
+        # Case 3: Apply different transformations to each channel, same across batch
+        elif self.share == 'batch':
+            transformed_channels = []
+            for minibatch in range(input_tensor.shape[0]):
+                channel = input_tensor[minibatch]
+                transformed_channel = self.transform(channel)
+                transformed_channels.append(transformed_channel)
+            # Stack the transformed channels back into a tensor along channel dimension
+            return torch.stack(transformed_channels, dim=0)
+
+        # Case 4: Apply different transformations to each channel of each batch element
+        elif self.share is False:
+            # Initialize a list to hold transformed batch elements
+            transformed = []
+            for i in range(input_tensor.shape[0]):
+                # Initialize a list to hold transformed channels for the i-th batch element
+                transformed_channels = []
+                for c in range(input_tensor.shape[1]):
+                    # Select the (i, c)-th channel
+                    channel = input_tensor[i, c]
+                    # Apply the transformation
+                    transformed_channel = self.transform(channel)
+                    transformed_channels.append(transformed_channel)
+                # Stack the transformed channels back into a tensor for the i-th batch element
+                transformed_element = torch.stack(transformed_channels, dim=0)
+                transformed.append(transformed_element)
+            # Stack the transformed batch elements back into a tensor
+            return torch.stack(transformed, dim=0)
+        else:
+            raise AttributeError(f"Could not interpret share type: {self.share}")
 
 
 class TransformList(nn.Module):
