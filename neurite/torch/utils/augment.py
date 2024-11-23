@@ -117,7 +117,7 @@ def random_crop(
     # Iterate through each dimension and make croppings for them independently.
     for dim in allowed_dims:
         # Decide if we are to crop the current dimension
-        if bool(prob):
+        if bool(prob()):
             # Determine the size of this dimension
             dim_size = input_tensor.shape[dim]
             # Sample a random proportion of the dimension to crop and convert it to a point along
