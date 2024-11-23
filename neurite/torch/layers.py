@@ -589,7 +589,7 @@ class SoftQuantize(BaseTransform):
             return_log=return_log,
         )
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+    def transform(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
         Performs the forward pass of the `SoftQuantize` module.
 
@@ -659,7 +659,7 @@ class GaussianBlur(BaseTransform):
         """
         super().__init__(kernel_size=kernel_size, sigma=sigma)
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+    def transform(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
         Performs the forward pass of the `GaussianBlur` module.
 
@@ -766,7 +766,7 @@ class Resample(BaseTransform):
             mode=mode,
         )
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+    def transform(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
         Performs the forward pass of the `Resample` module.
         """
@@ -870,7 +870,7 @@ class RandomClip(BaseTransform):
         """
         super().__init__(clip_min=clip_min, clip_max=clip_max, clip_prob=clip_prob, seed=seed)
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+    def transform(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
         Performs the forward pass of the `RandomClip` module.
 
@@ -958,7 +958,7 @@ class RandomGamma(BaseTransform):
         """
         super().__init__(gamma=gamma, prob=prob, seed=seed)
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+    def transform(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
         Performs the forward pass of the `RandomGamma` module.
 
