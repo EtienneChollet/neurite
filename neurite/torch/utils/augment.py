@@ -288,7 +288,6 @@ def random_gamma(
     prob = Bernoulli.make(prob)
     # Sample Bernoulli trial to determine whether to apply gamma transformation
     if bool(prob()):
-        print('yes')
         # Sample gamma
         gamma = Fixed.make(gamma)()
         # Apply gamma transformation

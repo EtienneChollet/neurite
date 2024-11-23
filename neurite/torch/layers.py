@@ -801,24 +801,93 @@ class RandomClip(BaseTransform):
 
 
 # TODO: Move to an augmentation package/repo?
-class RandomGamma(nn.Module):
+class RandomGamma(BaseTransform):
     """
     A PyTorch module that applies a random gamma transformation to a tensor.
 
-    Applies a gamma (exponential) transformation to the elements of the input tensor by drawing the
-    exponentiation factor from a uniform distribution.
+    The gamma transformation adjusts the contrast of the input tensor by applying a non-linear
+    operation. Specifically, each element in the tensor is raised to the power of `gamma`. This can
+    enhance or diminish the contrast of the input data, making it a valuable augmentation tool for
+    various deep learning tasks.
+
+    Examples
+    --------
+    ### Fixed gamma transformation
+    >>> transform = RandomGamma(gamma=2.0, prob=1.0)
+    >>> tensor = torch.tensor([0.25, 0.5, 0.75])
+    >>> gamma_tensor = transform(tensor)
+    >>> print(gamma_tensor)
+    tensor([0.0625, 0.2500, 0.5625])
+
+    ### Randomized gamma transformation with a range of gamma values
+    >>> gamma_sampler = Uniform(0.5, 1.5)
+    >>> transform = RandomGamma(gamma=gamma_sampler, prob=0.8)
+    >>> tensor = torch.tensor([0.25, 0.5, 0.75])
+    >>> gamma_tensor = transform(tensor)
+    >>> print(gamma_tensor)
+    tensor([0.1768, 0.5000, 0.8367])
+
+    ### Applying gamma transformation with reproducibility
+    >>> transform1 = RandomGamma(gamma=2.0, prob=1.0, seed=42)
+    >>> transform2 = RandomGamma(gamma=2.0, prob=1.0, seed=42)
+    >>> tensor = torch.tensor([0.25, 0.5, 0.75])
+    >>> gamma_tensor1 = transform1(tensor)
+    >>> gamma_tensor2 = transform2(tensor)
+    >>> print(torch.equal(gamma_tensor1, gamma_tensor2))
+    True
     """
-    def __init__(self):
+
+    def __init__(
+        self,
+        gamma: Union[float, int, Sampler] = 1.0,
+        prob: Union[float, int, Sampler] = 1.0,
+        seed: Union[int, Sampler] = None,
+    ):
         """
         Initialize the `RandomGamma` module.
+
+        Parameters
+        ----------
+        gamma : Union[float, int, Sampler], optional
+            The gamma value to apply for the transformation.
+            - If a `float` is provided, it represents a fixed gamma value.
+            - If a `Sampler` is provided, the gamma value is dynamically sampled from the specified
+            distribution.
+            By default `1.0`, which leaves the tensor unchanged.
+        prob : Union[float, int, Sampler], optional
+            The probability of applying the gamma transformation.
+            - If a `float` is provided, it's used as a fixed probability for the transformation.
+            - If a `Sampler` is provided, probabilities are dynamically generated for each
+            invocation.
+            Default is `1.0` (always apply).
+        seed : Union[int, Sampler], optional
+            A random seed or sampler to control the randomness of the gamma transformation. If
+            provided, it ensures reproducibility of the transformation. Defaults to `None`.
         """
-        super().__init__()
+        super().__init__(gamma=gamma, prob=prob, seed=seed)
 
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
         Performs the forward pass of the `RandomGamma` module.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            The input tensor to which the gamma transformation will be applied. It is assumed to
+            have a range suitable for gamma correction (typically normalized between 0 and 1).
+
+        Returns
+        -------
+        torch.Tensor
+            The tensor after applying the gamma transformation. If the transformation is not applied
+            (based on `prob`), the original `input_tensor` is returned unchanged.
         """
-        raise NotImplementedError("The `RandomGamma` module isn't ready yet :(")
+        return utils.random_gamma(
+            input_tensor=input_tensor,
+            gamma=self.gamma,
+            prob=self.prob,
+            seed=self.seed
+        )
 
 
 # TODO: Move to an augmentation package/repo?
