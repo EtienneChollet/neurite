@@ -171,7 +171,8 @@ def mse_loss(input_tensor: torch.Tensor, target_tensor: torch.Tensor) -> torch.T
 def create_gaussian_kernel(
     kernel_size: Union[Sampler, int] = 3,
     sigma: Union[Sampler, int, float] = 1,
-    ndim: int = 3
+    ndim: int = 3,
+    nchannels: int = 1
 ) -> torch.Tensor:
     """
     Create a {1D, 2D, 3D} Gaussian kernel.
@@ -215,6 +216,11 @@ def create_gaussian_kernel(
 
     # Reshape to 5D tensor for conv3d
     kernel = kernel.view(1, 1, *([kernel_size] * ndim))
+    # Repeat the kernel for each channel (depth-wise convolution)
+
+    if nchannels > 1:
+        kernel = kernel.repeat(nchannels, nchannels, *([1] * ndim))
+
     return kernel
 
 
@@ -260,7 +266,8 @@ def gaussian_smoothing(
     gaussian_kernel = create_gaussian_kernel(
         kernel_size=kernel_size,
         sigma=sigma,
-        ndim=ndim
+        ndim=ndim,
+        nchannels=input_tensor.shape[1]
     )
 
     # Calculate padding size
