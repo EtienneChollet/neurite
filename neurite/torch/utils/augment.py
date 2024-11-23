@@ -27,7 +27,8 @@ the License.
 """
 __all__ = [
     'random_crop',
-    'random_clip'
+    'random_clip',
+    'random_gamma'
 ]
 
 from typing import Union, Tuple, List
@@ -210,5 +211,87 @@ def random_clip(
         clip_max = Fixed.make(clip_max)
         # Sample and apply clips
         return input_tensor.clip_(clip_min(), clip_max())
+    else:
+        return input_tensor
+
+
+def random_gamma(
+    input_tensor: torch.Tensor,
+    gamma: Union[Sampler, float] = 1.0,
+    prob: Union[Sampler, float] = 1.0,
+    seed: Union[Sampler, int] = None,
+) -> torch.Tensor:
+    """
+    Applies a randomized gamma transformation to the input tensor with a specified probability.
+
+    The gamma transformation adjusts the contrast of the input tensor by applying a non-linear
+    operation. Specifically, each element in the tensor is raised to the power of `gamma`. This can
+    enhance or diminish the contrast of the input data.
+
+    Parameters
+    ----------
+    input_tensor : torch.Tensor
+        The tensor that the gamma transformation will be applied. It is assumed to have a range
+        suitable for gamma correction (typically normalized between 0 and 1).
+    gamma : Union[float, Sampler], optional
+        The gamma value to apply for the transformation.
+        - If a `float` is provided, it represents a fixed gamma value.
+        - If a `Sampler` is provided, the gamma value is dynamically sampled based on the specified
+          distribution.
+        By default `1.0`, which leaves the tensor unchanged.
+    prob : Union[float, Sampler], optional
+        The probability of applying the gamma transformation.
+        - If a `float` is provided, it's used as a fixed probability for the transformation.
+        - If a `Sampler` is provided, probabilities are dynamically generated for each invocation.
+        By default `1.0` (always apply).
+    seed : Union[int, Sampler], optional
+        A random seed or sampler to control the randomness of the gamma transformation. If provided,
+        it ensures reproducibility of the transformation. Defaults to `None`.
+
+    Returns
+    -------
+    torch.Tensor
+        The tensor after applying the gamma transformation. If the transformation is not applied
+        (based on `prob`), the original `input_tensor` is returned unchanged.
+
+    Examples
+    --------
+    ### Fixed gamma transformation
+    >>> tensor = torch.tensor([0.25, 0.5, 0.75])
+    >>> gamma_tensor = random_gamma(tensor, gamma=2.0, prob=1.0)
+    >>> print(gamma_tensor)
+    tensor([0.0625, 0.2500, 0.5625])
+
+    ### Randomized gamma transformation with a range of gamma values
+    >>> from neurite.torch.random import Uniform
+    >>> tensor = torch.tensor([0.25, 0.5, 0.75])
+    >>> gamma_sampler = Uniform(0.5, 1.5)
+    >>> gamma_tensor = random_gamma(tensor, gamma=gamma_sampler, prob=0.8)
+    >>> print(gamma_tensor)
+    tensor([0.1768, 0.5000, 0.8367])
+
+    ### Applying gamma transformation with reproducibility
+    >>> tensor = torch.tensor([0.25, 0.5, 0.75])
+    >>> gamma_tensor1 = random_gamma(tensor, gamma=2.0, prob=1.0, seed=42)
+    >>> gamma_tensor2 = random_gamma(tensor, gamma=2.0, prob=1.0, seed=42)
+    >>> print(torch.equal(gamma_tensor1, gamma_tensor2))
+    True
+    """
+    # Initialize random seed if provided
+    if seed is not None:
+        torch.manual_seed(seed)
+
+    # If prob is a sampler, sample from it
+    if isinstance(prob, Sampler):
+        prob = prob()
+    # Make prob into a Bernoulli distribution
+    prob = Bernoulli.make(prob)
+    # Sample Bernoulli trial to determine whether to apply gamma transformation
+    if bool(prob()):
+        print('yes')
+        # Sample gamma
+        gamma = Fixed.make(gamma)()
+        # Apply gamma transformation
+        return input_tensor.pow(gamma)
     else:
         return input_tensor
