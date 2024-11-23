@@ -515,7 +515,6 @@ class SoftQuantize(BaseTransform):
         )
 
 
-# TODO: I disagree with putting this in neurite/torch/layers.py. Can we move to a loss module?
 class MSE(nn.Module):
     """
     A PyTorch module that calculates the mean squared error.
@@ -545,7 +544,6 @@ class MSE(nn.Module):
         return utils.mse_loss(input_tensor=input_tensor, target_tensor=target_tensor)
 
 
-# TODO: Move to an augmentation package/repo?
 class GaussianBlur(BaseTransform):
     """
     A PyTorch module to blur a {1D, 2D, 3D} tensor by convolving it with a Gaussian kernel.
@@ -584,7 +582,6 @@ class GaussianBlur(BaseTransform):
         )
 
 
-# TODO: Move to an augmentation package/repo?
 class Resample(BaseTransform):
     """
 
@@ -625,7 +622,7 @@ class Resample(BaseTransform):
             are forbidden from subsampling. Default is (0, 1) to ignore batch and channel
             dimensions.
         p : float, optional
-            The probability of selecting each dimension for subsampling. This probability 
+            The probability of selecting each dimension for subsampling. This probability
             is applied as an independent Bernoulli trial for each dimension. By default, 0.5.
         max_concurrent_subsamplings : int, optional
             The maximum number of dimensions that can be subsampled simultaneously. If
@@ -711,7 +708,6 @@ class Subsample(Resample):
         super().__init__(*args, **kwargs)
 
 
-# TODO: Move to an augmentation package/repo?
 class RandomCrop(nn.Module):
     """
     A PyTorch module that randomly crops the input tensor to a particular field of view.
@@ -732,7 +728,6 @@ class RandomCrop(nn.Module):
         raise NotImplementedError("The `RandomCrop` module isn't ready yet :(")
 
 
-# TODO: Move to an augmentation package/repo?
 class RandomClip(BaseTransform):
     """
     A PyTorch module that randomly clips tensor elements outside the bounds.
@@ -800,7 +795,6 @@ class RandomClip(BaseTransform):
         )
 
 
-# TODO: Move to an augmentation package/repo?
 class RandomGamma(BaseTransform):
     """
     A PyTorch module that applies a random gamma transformation to a tensor.
@@ -890,7 +884,6 @@ class RandomGamma(BaseTransform):
         )
 
 
-# TODO: Move to an augmentation package/repo?
 class RandomIntensityLookup(nn.Module):
     """
     A PyTorch module to augment the contrast of a single-channel tensor.
@@ -911,8 +904,6 @@ class RandomIntensityLookup(nn.Module):
         raise NotImplementedError("The `RandomIntensityLookup` module isn't ready yet :(")
 
 
-# TODO: I suggest renaming this to BrenouliMasker
-# TODO: Move to an augmentation package/repo?
 class RandomClearLabel(nn.Module):
     """
     A PyTorch module that applies a Brenouli mask to the input tensor.
@@ -933,8 +924,6 @@ class RandomClearLabel(nn.Module):
         raise NotImplementedError("The `RandomClearLabel` module isn't ready yet :(")
 
 
-# TODO: Rename something more intuitive like `LabelsToIntensity`?
-# TODO: Move to an augmentation package/repo?
 class DrawImage(nn.Module):
     """
     A PyTorch module that generates an image from a label map by uniformly sampling a random
@@ -953,7 +942,6 @@ class DrawImage(nn.Module):
         raise NotImplementedError("The `DrawImage` module isn't ready yet :(")
 
 
-# TODO: This is not how code should be modularized/encapsulated. This should go in another package.
 #########################################################
 # Sparse layers
 #########################################################
@@ -976,7 +964,6 @@ class SpatiallySparse_Dense(nn.Module):
         raise NotImplementedError("The `SpatiallySparse_Dense` module isn't ready yet :(")
 
 
-# TODO: Move to another package. Encapsulate code better.
 #########################################################
 # "Local" layers -- layers with parameters at each voxel
 #########################################################
@@ -1147,7 +1134,6 @@ class CovStream(nn.Module):
         raise NotImplementedError("The `CovStream` module isn't ready yet :(")
 
 
-# TODO: Encapsulate better. Move to a different package.
 ##########################################
 # FFT Layers
 ##########################################
@@ -1168,60 +1154,3 @@ class FFT(nn.Module):
         Performs the forward pass of the `FFT` module.
         """
         raise NotImplementedError("The `FFT` module isn't ready yet :(")
-
-
-class Uniform:
-    """
-    Sample from a continuious uniform distribution.
-
-    This class samples from a continuous uniform distribution on an exclusive range. If only one
-    value is passed to the constructor, it's interpreted as `max`.
-    """
-
-    def __init__(self, *args, **kwargs):
-        """
-        Parameters
-        ----------
-        min : float, optional
-            Lower bound of the range if provided as a keyword argument. Default is 0.
-        max : float, optional
-            Upper bound of the range if provided as a keyword argument. Default is 1.
-
-        Examples
-        --------
-        >>> Uniform()()
-        tensor([0.4648])
-        >>> Uniform(min=-3, max=-2)()
-        tensor([-2.3329])
-        >>> Uniform(10, 20)((2, 2))
-        tensor([[11.9030, 14.2310],
-                [15.6445, 16.0478]])
-        """
-        min, max = 0, 1
-        if len(args) == 2:
-            min, max = args
-        elif len(args) == 1:
-            min, max = 0.0, args[0]
-        if 'min' in kwargs:
-            min = kwargs['min']
-        if 'max' in kwargs:
-            max = kwargs['max']
-
-        self.min = min
-        self.max = max
-
-    def __call__(self, shape: int = (1,)):
-        """
-        Forward call of the `Uniform` sampler.
-
-        Parameters
-        ----------
-        shape : tuple, optional
-            Shape of the output sample. Default is (1,)
-
-        Returns
-        -------
-        torch.Tensor
-            Results of the uniform sampling.
-        """
-        return utils.uniform(self.min, self.max, shape)
