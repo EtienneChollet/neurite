@@ -562,7 +562,9 @@ class SoftQuantize(BaseTransform):
         softness: Union[Sampler, int, float] = 1.0,
         min_clip: Union[Sampler, int, float] = -float('inf'),
         max_clip: Union[Sampler, int, float] = float('inf'),
-        return_log: bool = False
+        return_log: bool = False,
+        *args,
+        **kwargs
     ):
         """
         Initialize the `SoftQuantize` module.
@@ -587,6 +589,8 @@ class SoftQuantize(BaseTransform):
             min_clip=min_clip,
             max_clip=max_clip,
             return_log=return_log,
+            *args,
+            **kwargs
         )
 
     def transform(self, input_tensor: torch.Tensor) -> torch.Tensor:
@@ -646,7 +650,14 @@ class GaussianBlur(BaseTransform):
     """
     A PyTorch module to blur a {1D, 2D, 3D} tensor by convolving it with a Gaussian kernel.
     """
-    def __init__(self, kernel_size: int = 3, sigma: float = 1):
+
+    def __init__(
+        self,
+        kernel_size: int = 3,
+        sigma: float = 1,
+        *args,
+        **kwargs
+    ):
         """
         Initialize the `GaussianBlur` module.
 
@@ -657,7 +668,12 @@ class GaussianBlur(BaseTransform):
         sigma : Sampler or int or float, optional
             Standard deviation of the Gaussian kernel, default is 1.
         """
-        super().__init__(kernel_size=kernel_size, sigma=sigma)
+        super().__init__(
+            kernel_size=kernel_size,
+            sigma=sigma,
+            *args,
+            **kwargs
+        )
 
     def transform(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
@@ -697,6 +713,8 @@ class Resample(BaseTransform):
         p: float = 0.5,
         max_concurrent_subsamplings: int = None,
         mode: str = 'nearest',
+        *args,
+        **kwargs
     ):
         """
         Initialize the `Resample` module.
@@ -764,6 +782,8 @@ class Resample(BaseTransform):
             p=p,
             max_concurrent_subsamplings=max_concurrent_subsamplings,
             mode=mode,
+            *args,
+            **kwargs
         )
 
     def transform(self, input_tensor: torch.Tensor) -> torch.Tensor:
@@ -851,6 +871,8 @@ class RandomClip(BaseTransform):
         clip_max: Union[float, int, Sampler] = 1,
         clip_prob: Union[float, int, Sampler] = 0.5,
         seed: Union[int, Sampler] = None,
+        *args,
+        **kwargs
     ):
         """
         Initialize `RandomClip` with specified clipping bounds and sampling probability.
@@ -868,7 +890,14 @@ class RandomClip(BaseTransform):
         seed : Union[int, Sampler], optional
             Seed for random number generation to ensure reproducibility. Defaults to None.
         """
-        super().__init__(clip_min=clip_min, clip_max=clip_max, clip_prob=clip_prob, seed=seed)
+        super().__init__(
+            clip_min=clip_min,
+            clip_max=clip_max,
+            clip_prob=clip_prob,
+            seed=seed,
+            *args,
+            **kwargs
+        ) 
 
     def transform(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
