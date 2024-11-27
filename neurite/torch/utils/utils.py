@@ -34,6 +34,7 @@ __all__ = [
     'subsample_tensor_random_dims',
     'upsample_tensor',
     'make_range',
+    'random_clear_label'
 ]
 
 from typing import Union
@@ -698,3 +699,85 @@ def make_range(*args, **kwargs) -> tuple:
         raise ValueError("`max` must be greater than `min`.")
 
     return (min, max)
+
+
+def random_clear_label(
+    input_tensor: torch.Tensor,
+    label_tensor: torch.Tensor,
+    prob: Union[float, int, Sampler] = 0.5,
+    exclude_zero: bool = True,
+    seed: int = None
+) -> torch.Tensor:
+    """
+    Randomly clears/erases regions from an image corresponding to randomly selected regions in a
+    label map.
+
+    This function identifies unique labels within the `label_tensor` and, based on a specified
+    probability, clears (sets to zero) the corresponding regions in the `input_tensor`. This can be
+    used for tasks such as data augmentation, where certain labels are randomly omitted to
+    simulate occlusions or missing annotations.
+
+    Parameters
+    ----------
+    input_tensor : torch.Tensor
+        Image or tensor to clear.
+    label_tensor : torch.Tensor
+        Label map corresponding to sampling domain from which to select regions for clearing.
+    prob : Union[float, int, Sampler], optional
+        Probability of any label/region being selected for erasure as determined by iid Bernoulli
+        trials, by default 0.5.
+    exclude_zero : bool, optional
+        Optionally exclude zero (uaually background) from the list of potential regions to clear
+        (never clear zero labels), by default True.
+    seed : int, optional
+        A random seed or sampler to control the randomness of label clearing operations. If
+        provided, it ensures reproducibility of the clearing process. By default, None.
+
+    Returns
+    -------
+    torch.Tensor
+        The modified tensor with specified labels cleared (set to zero). If no labels are cleared,
+        the original `input_tensor` is returned unchanged.
+
+    Examples
+    --------
+    ### Clearing labels with a fixed probability
+    >>> input_tensor = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+    >>> label_tensor = torch.tensor([1, 2, 3, 4, 5, 6])
+    >>> cleared_tensor = random_clear_label(input_tensor, label_tensor, prob=0.5)
+    >>> print(cleared_tensor)
+    tensor([0.0, 0.0, 0.3, 0.0, 0.5, 0.6])
+
+    ### Excluding label `0` from being cleared
+    >>> input_tensor = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+    >>> label_tensor = torch.tensor([0, 0, 0, 0, 0, 0])
+    >>> cleared_tensor = random_clear_label(input_tensor, label_tensor, prob=1.0, exclude_zero=True)
+    >>> print(cleared_tensor)
+    torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+
+    ### Reproducibility with a seed
+    >>> input_tensor = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+    >>> label_tensor = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+    >>> cleared_tensor1 = random_clear_label(input_tensor, label_tensor, prob=1.0, seed=42)
+    >>> cleared_tensor2 = random_clear_label(input_tensor, label_tensor, prob=1.0, seed=42)
+    >>> print(torch.equal(cleared_tensor1, cleared_tensor2))
+    True
+    """
+    # Initialize random seed if provided
+    if seed is not None:
+        if isinstance(seed, Sampler):
+            seed = seed()
+        torch.manual_seed(seed)
+    # Determine all unique labels
+    unique_labels = torch.unique(label_tensor)
+    # Optionally exclude zero label (usually background)
+    if exclude_zero:
+        unique_labels = unique_labels[unique_labels != 0]
+        print(unique_labels)
+    # Apply Bernoulli mask to determine which labels to clear
+    labels_to_clear = apply_bernoulli_mask(unique_labels, prob, returns='successes')
+    # Clear the specified labels in the input tensor
+    for label in labels_to_clear:
+        input_tensor.masked_fill_(label_tensor == label, 0)
+
+    return input_tensor
