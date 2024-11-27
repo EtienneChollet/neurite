@@ -397,6 +397,7 @@ class Negate(nn.Module):
     """
     A PyTorch module that returns the negative of the input tensor.
     """
+
     def __init__(self):
         """
         Initialize the `Negate` module.
@@ -425,6 +426,7 @@ class RescaleValues(nn.Module):
     """
     A PyTorch module that rescales the values of the input tensor.
     """
+
     def __init__(self, scale_factor: float):
         """
         Initialize the `RescaleValues` module.
@@ -458,6 +460,7 @@ class Resize(nn.Module):
     """
     A PyTorch module that resizes the input tensor.
     """
+
     def __init__(
         self,
         size: Optional[Union[int, Tuple[int, int]]] = None,
@@ -528,34 +531,8 @@ class SoftQuantize(BaseTransform):
     machine learning, where it is desirable to have a differentiable version of a quantized
     quantity, allowing for backprop. Hard quantization is non-differentiable and creates gradients
     of zero, making gradient-based optimization impossible.
-
-    Parameters
-    ----------
-    nb_bins : int, optional
-        The number of discrete bins to softly quantize the input values into. By default 16
-    softness : float, optional
-        The softness factor for quantization. A higher value gives smoother quantization.
-        By default 1.0
-    min_clip : float, optional
-        Clip data lower than this value before calculating bin centers. By default -float('inf')
-    max_clip : float, optional
-        Clip data higher than this value before calculating bin centers. By default float('inf')
-    return_log : bool, optional
-        Optionally return the log of the softly quantized tensor. By default False
-
-    Examples
-    --------
-    >>> import torch
-    >>> import matplotlib.pyplot as plt
-    # Make a random 3D tensor with zero mean and unit variance.
-    >>> input_tensor = torch.randn(1, 1, 32, 32, 32)
-    # Initialize the SoftQuantize instance.
-    >>> soft_quantizer = SoftQuantize(nb_bins=4, softness=0.5)
-    # Apply the SoftQuantize instance to the input tensor
-    >>> softly_quantized_tensor = soft_quantizer(input_tensor)
-    # Visualize the softly quantized tensor.
-    >>> plt.imshow(softly_quantized_tensor[0, 0, 16])
     """
+
     def __init__(
         self,
         nb_bins: Union[Sampler, int] = 16,
@@ -582,6 +559,19 @@ class SoftQuantize(BaseTransform):
             Clip data higher than this value before calculating bin centers. By default float('inf')
         return_log : bool, optional
             Optionally return the log of the softly quantized tensor. By default False
+
+        Examples
+        --------
+        >>> import torch
+        >>> import matplotlib.pyplot as plt
+        # Make a random 3D tensor with zero mean and unit variance.
+        >>> input_tensor = torch.randn(1, 1, 32, 32, 32)
+        # Initialize the SoftQuantize instance.
+        >>> soft_quantizer = SoftQuantize(nb_bins=4, softness=0.5)
+        # Apply the SoftQuantize instance to the input tensor
+        >>> softly_quantized_tensor = soft_quantizer(input_tensor)
+        # Visualize the softly quantized tensor.
+        >>> plt.imshow(softly_quantized_tensor[0, 0, 16])
         """
         super().__init__(
             nb_bins=nb_bins,
@@ -621,6 +611,7 @@ class MSE(nn.Module):
     """
     A PyTorch module that calculates the mean squared error.
     """
+
     def __init__(self):
         """
         Initialize the `MSE` module.
@@ -698,13 +689,13 @@ class GaussianBlur(BaseTransform):
 
 class Resample(BaseTransform):
     """
-
     A PyTorch module to resample a tensor.
 
     This module resamples the input tensor by a factor of `stride` along the
     specified dimension by interleaving dropouts along it (keeping every `stride`th element).
     Optionally upsample the tensor after downsampling it to restore it to its original dimensions.
     """
+
     def __init__(
         self,
         operations: str = 'su',
@@ -816,6 +807,7 @@ class Subsample(Resample):
     @deprecated: Use `Resample` instead.
     A PyTorch module to subsample and upsample a tensor based on specified operations.
     """
+
     def __init__(self, *args, **kwargs):
         warnings.warn(
             "Subsample is deprecated and will be removed in future versions. "
@@ -833,6 +825,7 @@ class RandomCrop(nn.Module):
     Randomly crop a tensor by multiplying with a spatially continuious binary mask (as opposed to
     brenouli sampling).
     """
+
     def __init__(self):
         """
         Initialize the `RandomCrop` module.
@@ -849,20 +842,6 @@ class RandomCrop(nn.Module):
 class RandomClip(BaseTransform):
     """
     A PyTorch module that randomly clips tensor elements outside the bounds.
-
-    Examples
-    --------
-    ### Initialize the `RandomClip` module and apply it to a tensor:
-    >>> transform = RandomClip(clip_min=0.1, clip_max=0.9, clip_prob=0.5)
-    >>> input_tensor = torch.randn(3, 3)
-    >>> output_tensor = transform(input_tensor)
-    >>> print(output_tensor)
-
-    ### Use a sampler for dynamic clipping bounds:
-    >>> from my_samplers import UniformSampler
-    >>> transform = RandomClip(clip_min=UniformSampler(0, 0.5), clip_max=UniformSampler(0.5, 1.0))
-    >>> output_tensor = transform(input_tensor)
-    >>> print(output_tensor)
     """
 
     def __init__(
@@ -889,6 +868,20 @@ class RandomClip(BaseTransform):
             Probability of applying the clipping transformation. Defaults to 0.5.
         seed : Union[int, Sampler], optional
             Seed for random number generation to ensure reproducibility. Defaults to None.
+
+        Examples
+        --------
+        ### Initialize the `RandomClip` module and apply it to a tensor:
+        >>> transform = RandomClip(clip_min=0.1, clip_max=0.9, clip_prob=0.5)
+        >>> input_tensor = torch.randn(3, 3)
+        >>> output_tensor = transform(input_tensor)
+        >>> print(output_tensor)
+
+        ### Use a sampler for dynamic clipping bounds:
+        >>> from my_samplers import UniformSampler
+        >>> transform = RandomClip(clip_min=UniformSampler(0, 0.5), clip_max=UniformSampler(0.5, 1.0))
+        >>> output_tensor = transform(input_tensor)
+        >>> print(output_tensor)
         """
         super().__init__(
             clip_min=clip_min,
@@ -930,32 +923,6 @@ class RandomGamma(BaseTransform):
     operation. Specifically, each element in the tensor is raised to the power of `gamma`. This can
     enhance or diminish the contrast of the input data, making it a valuable augmentation tool for
     various deep learning tasks.
-
-    Examples
-    --------
-    ### Fixed gamma transformation
-    >>> transform = RandomGamma(gamma=2.0, prob=1.0)
-    >>> tensor = torch.tensor([0.25, 0.5, 0.75])
-    >>> gamma_tensor = transform(tensor)
-    >>> print(gamma_tensor)
-    tensor([0.0625, 0.2500, 0.5625])
-
-    ### Randomized gamma transformation with a range of gamma values
-    >>> gamma_sampler = Uniform(0.5, 1.5)
-    >>> transform = RandomGamma(gamma=gamma_sampler, prob=0.8)
-    >>> tensor = torch.tensor([0.25, 0.5, 0.75])
-    >>> gamma_tensor = transform(tensor)
-    >>> print(gamma_tensor)
-    tensor([0.1768, 0.5000, 0.8367])
-
-    ### Applying gamma transformation with reproducibility
-    >>> transform1 = RandomGamma(gamma=2.0, prob=1.0, seed=42)
-    >>> transform2 = RandomGamma(gamma=2.0, prob=1.0, seed=42)
-    >>> tensor = torch.tensor([0.25, 0.5, 0.75])
-    >>> gamma_tensor1 = transform1(tensor)
-    >>> gamma_tensor2 = transform2(tensor)
-    >>> print(torch.equal(gamma_tensor1, gamma_tensor2))
-    True
     """
 
     def __init__(
@@ -984,6 +951,32 @@ class RandomGamma(BaseTransform):
         seed : Union[int, Sampler], optional
             A random seed or sampler to control the randomness of the gamma transformation. If
             provided, it ensures reproducibility of the transformation. Defaults to `None`.
+
+        Examples
+        --------
+        ### Fixed gamma transformation
+        >>> transform = RandomGamma(gamma=2.0, prob=1.0)
+        >>> tensor = torch.tensor([0.25, 0.5, 0.75])
+        >>> gamma_tensor = transform(tensor)
+        >>> print(gamma_tensor)
+        tensor([0.0625, 0.2500, 0.5625])
+
+        ### Randomized gamma transformation with a range of gamma values
+        >>> gamma_sampler = Uniform(0.5, 1.5)
+        >>> transform = RandomGamma(gamma=gamma_sampler, prob=0.8)
+        >>> tensor = torch.tensor([0.25, 0.5, 0.75])
+        >>> gamma_tensor = transform(tensor)
+        >>> print(gamma_tensor)
+        tensor([0.1768, 0.5000, 0.8367])
+
+        ### Applying gamma transformation with reproducibility
+        >>> transform1 = RandomGamma(gamma=2.0, prob=1.0, seed=42)
+        >>> transform2 = RandomGamma(gamma=2.0, prob=1.0, seed=42)
+        >>> tensor = torch.tensor([0.25, 0.5, 0.75])
+        >>> gamma_tensor1 = transform1(tensor)
+        >>> gamma_tensor2 = transform2(tensor)
+        >>> print(torch.equal(gamma_tensor1, gamma_tensor2))
+        True
         """
         super().__init__(gamma=gamma, prob=prob, seed=seed)
 
