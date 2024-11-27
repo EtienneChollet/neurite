@@ -54,7 +54,7 @@ __all__ = [
 
 import inspect
 import warnings
-from typing import Optional, Union, Tuple, Callable
+from typing import Optional, Union, Tuple, Callable, List
 from functools import wraps
 import torch
 from torch import nn
@@ -598,15 +598,19 @@ class SoftQuantize(BaseTransform):
 
         Examples
         --------
-        >>> import torch
-        >>> import matplotlib.pyplot as plt
-        # Make a random 3D tensor with zero mean and unit variance.
+        >>> # Make a random 3D tensor with zero mean and unit variance.
         >>> input_tensor = torch.randn(1, 1, 32, 32, 32)
-        # Initialize the SoftQuantize instance.
+        >>> # Initialize the SoftQuantize instance.
         >>> soft_quantizer = SoftQuantize(nb_bins=4, softness=0.5)
-        # Apply the SoftQuantize instance to the input tensor
+        >>> # Apply the SoftQuantize instance to the input tensor
         >>> softly_quantized_tensor = soft_quantizer(input_tensor)
-        # Visualize the softly quantized tensor.
+        >>> # Visualize the softly quantized tensor.
+        >>> plt.imshow(softly_quantized_tensor[0, 0, 16])
+
+        ### Softly quantizing with randomly sampled `nb_bins` and `softness` parameters
+        >>> # Define `nb_bins` to sample a uniform int distribution, and `softness` a float dist
+        >>> soft_quantizer = SoftQuantize(nb_bins=RandInt(3, 32), softness=Uniform(0.001, 10))
+        >>> softly_quantized_tensor = soft_quantizer(input_tensor)
         >>> plt.imshow(softly_quantized_tensor[0, 0, 16])
         """
         super().__init__(
@@ -858,21 +862,73 @@ class RandomCrop(nn.Module):
     """
     A PyTorch module that randomly crops the input tensor to a particular field of view.
 
-    Randomly crop a tensor by multiplying with a spatially continuious binary mask (as opposed to
-    brenouli sampling).
+    This module randomly selects a subset of the allowed dimensions (excluding `forbidden_dims`)
+    and crops each independently by a proportion that is randomly drawn from a distribution. The
+    proportion to crop can either be fixed or sampled from a specified distribution. Each allowed
+    dimension has a probability `prob` of being cropped based on the results of independent
+    Bernoulli trials.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        crop_proportion: Union[Sampler, float] = 0.5,
+        prob: Union[Sampler, float] = 1,
+        forbidden_dims: Union[Tuple, List] = (0, 1),
+        seed: Union[Sampler, int] = None,
+    ):
         """
         Initialize the `RandomCrop` module.
+
+        Parameters
+        ----------
+        crop_proportion : Union[Sampler, float], optional
+            The proportion that is randomly cropped from any allowed dimension. By default 0.5
+            - If a `float` is provided, it represents the maximum proportion (0 to 1) to crop,
+            sampled from independent uniform distributinos for each allowed dimension. A value of
+            `0.5` means up to 50% of each dimension can be cropped.
+            - If a `Sampler` is provided, cropped proportions are dynamically sampled based on the
+            specified distribution
+        prob : Union[Sampler, float], optional
+            The probability of cropping each allowed dimension. By default 1.0
+            - If a `float` is provided, it's used as a fixed probability for all eligible
+            dimensions.
+            - If a `Sampler` is provided, probabilities are dynamically generated for each
+            dimension.
+        forbidden_dims : Union[Tuple[int, ...], List[int]], optional
+            Dimensions that should never be cropped. By defult `(0, 1)` (batch and channel
+            dimensions)
+        seed : Union[Sampler, int], optional
+            A random seed or sampler to control the randomness of cropping operations. If provided,
+            it ensures reproducibility of the cropping. Defaults to `None`.
         """
-        super().__init__()
+        super().__init__(
+            crop_proportion=crop_proportion,
+            prob=prob,
+            forbidden_dims=forbidden_dims,
+            seed=seed
+        )
 
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
         Performs the forward pass of the `RandomCrop` module.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            The tensor to be randomly cropped. It is assumed to have batch and channel dimensions.
+
+        Returns
+        -------
+        torch.Tensor
+            The tensor that has been randomly cropped.
         """
-        raise NotImplementedError("The `RandomCrop` module isn't ready yet :(")
+        return utils.random_crop(
+            input_tensor=input_tensor,
+            crop_proportion=self.crop_proportion,
+            prob=self.prob,
+            forbidden_dims=self.forbidden_dims,
+            seed=self.seed
+        )
 
 
 class RandomClip(BaseTransform):
