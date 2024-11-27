@@ -757,7 +757,7 @@ def random_clear_label(
 
     ### Reproducibility with a seed
     >>> input_tensor = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
-    >>> label_tensor = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+    >>> label_tensor = torch.tensor([1, 2, 3, 4, 5, 6])
     >>> cleared_tensor1 = random_clear_label(input_tensor, label_tensor, prob=1.0, seed=42)
     >>> cleared_tensor2 = random_clear_label(input_tensor, label_tensor, prob=1.0, seed=42)
     >>> print(torch.equal(cleared_tensor1, cleared_tensor2))
@@ -773,7 +773,6 @@ def random_clear_label(
     # Optionally exclude zero label (usually background)
     if exclude_zero:
         unique_labels = unique_labels[unique_labels != 0]
-        print(unique_labels)
     # Apply Bernoulli mask to determine which labels to clear
     labels_to_clear = apply_bernoulli_mask(unique_labels, prob, returns='successes')
     # Clear the specified labels in the input tensor
