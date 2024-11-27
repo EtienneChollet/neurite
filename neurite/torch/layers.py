@@ -1131,22 +1131,88 @@ class RandomIntensityLookup(nn.Module):
 
 class RandomClearLabel(nn.Module):
     """
-    A PyTorch module that applies a Brenouli mask to the input tensor.
+    A PyTorch module to randomly clear/erase regions from an image corresponding to randomly
+    selected entities/continuious regions in a label map.
 
-    Compute a Brenouli mask from the shape of the input tensor and apply it to return a tensor whose
-    elements have been dropped out randomly.
+    This module identifies unique labels within the `label_tensor` and, based on a specified
+    probability, designates regions of the `input_tensor` to be cleared (set to zero) corresponding
+    to randomly selected labels. This can be used for tasks such as data augmentation, where certain
+    labels are randomly omitted to simulate occlusions or missing annotations.
+
+    Examples
+    --------
+    ### Clearing labels with a fixed probability
+    >>> transform = RandomClearLabel(prob=0.75)
+    >>> input_tensor = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+    >>> label_tensor = torch.tensor([1, 2, 3, 4, 5, 6])
+    >>> cleared_tensor = transform(input_tensor, label_tensor)
+    >>> print(cleared_tensor)
+    tensor([0.0000, 0.2000, 0.0000, 0.0000, 0.0000, 0.0000])
+
+    ### Reproducibility with a seed
+    >>> transform1 = RandomClearLabel(seed=32)
+    >>> transform2 = RandomClearLabel(seed=32)
+    >>> input_tensor = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+    >>> label_tensor = torch.tensor([1, 2, 3, 4, 5, 6])
+    >>> cleared_tensor1 = transform1(input_tensor, label_tensor)
+    >>> cleared_tensor2 = transform2(input_tensor, label_tensor)
+    >>> print(torch.equal(cleared_tensor1, cleared_tensor2))
+    True
     """
-    def __init__(self):
+    def __init__(
+        self,
+        prob: Union[float, int, Sampler] = 0.5,
+        exclude_zero: bool = True,
+        seed: int = None,
+    ):
         """
         Initialize the `RandomClearLabel` module.
+
+        Parameters
+        ----------
+        prob : Union[float, int, Sampler], optional
+            Probability of any label/region being selected for erasure as determined by iid
+            Bernoulli trials, by default 0.5.
+        exclude_zero : bool, optional
+            Optionally exclude zero (uaually background) from the list of potential regions to clear
+            (never clear zero labels), by default True.
+        seed : int, optional
+            A random seed or sampler to control the randomness of label clearing operations. If
+            provided, it ensures reproducibility of the clearing process. By default, None.
         """
         super().__init__()
+        self.prob = prob
+        self.exclude_zero = exclude_zero
+        self.seed = seed
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        input_tensor: torch.Tensor,
+        label_tensor: torch.Tensor
+    ) -> torch.Tensor:
         """
         Performs the forward pass of the `RandomClearLabel` module.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            Image or tensor to clear.
+        label_tensor : torch.Tensor
+            Label map corresponding to sampling domain from which to select regions for clearing.
+
+        Returns
+        -------
+        torch.Tensor
+            The modified tensor with specified labels cleared (set to zero). If no labels are
+            cleared, the original `input_tensor` is returned unchanged.
         """
-        raise NotImplementedError("The `RandomClearLabel` module isn't ready yet :(")
+        return utils.random_clear_label(
+            input_tensor=input_tensor,
+            label_tensor=label_tensor,
+            prob=self.prob,
+            exclude_zero=self.exclude_zero,
+            seed=self.seed
+        )
 
 
 class DrawImage(nn.Module):
