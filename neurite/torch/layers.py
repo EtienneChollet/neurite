@@ -127,6 +127,16 @@ class BaseTransform(nn.Module):
         - `False`: Apply distinct transformations for each channel of each batch element.
     theta : Dict[str, Any]
         Arbitrary parameters for the transformation.
+
+    Notes
+    -----
+    - Subclasses of `BaseTransform` must define a `transform()` method, as opposed to the nn.Module
+    convention of `forward()` method.
+    - Currently, `BaseTransform` is only able to handle transformations that involve a single
+    `input_tensor`, so paired x-y transformations are not possible (yet).
+    - Subclasses of `BaseTransform` must pass all initialization arguments into the
+    `super().__init__()` constructor. This allows the arguments to be registered to theta, and thus
+    saved upon serialization.
     """
 
     @register_init_arguments
@@ -858,7 +868,7 @@ class Subsample(Resample):
         super().__init__(*args, **kwargs)
 
 
-class RandomCrop(nn.Module):
+class RandomCrop(BaseTransform):
     """
     A PyTorch module that randomly crops the input tensor to a particular field of view.
 
@@ -908,7 +918,7 @@ class RandomCrop(nn.Module):
             seed=seed
         )
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+    def transform(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
         Performs the forward pass of the `RandomCrop` module.
 
@@ -971,7 +981,10 @@ class RandomClip(BaseTransform):
 
         ### Use a sampler for dynamic clipping bounds:
         >>> from my_samplers import UniformSampler
-        >>> transform = RandomClip(clip_min=UniformSampler(0, 0.5), clip_max=UniformSampler(0.5, 1.0))
+        >>> transform = RandomClip(
+                clip_min=UniformSampler(0, 0.5),
+                clip_max=UniformSampler(0.5, 1.0)
+            )
         >>> output_tensor = transform(input_tensor)
         >>> print(output_tensor)
         """
