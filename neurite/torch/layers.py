@@ -60,7 +60,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from . import utils
-from ..torch.random import Sampler, Bernoulli
+from ..torch.random import Sampler, Bernoulli, Fixed
 
 
 def register_init_arguments(func: Callable) -> Callable:
@@ -460,12 +460,11 @@ class Resize(nn.Module):
     """
     A PyTorch module that resizes the input tensor.
     """
-
     def __init__(
         self,
         size: Optional[Union[int, Tuple[int, int]]] = None,
         scale_factor: Optional[Union[float, Tuple[float, float]]] = None,
-        mode: str = "bilinear",
+        mode: str = "nearest",
         align_corners: Optional[bool] = None,
         recompute_scale_factor: Optional[bool] = None,
         antialias: bool = False,
@@ -487,8 +486,45 @@ class Resize(nn.Module):
             If True, recomputes the scale factor for interpolation.
         antialias : bool, default=False
             Applies anti-aliasing if `scale_factor` < 1.0.
+
+        Examples
+        --------
+        >>> # Define a tensor we'll use for resizing examples
+        >>> input_tensor = torch.randn(1, 1, 32, 32, 32)
+
+        ### Resizing with fixed `scale_factor`
+        >>> transform = Resize(scale_factor=2)
+        >>> resized_tensor = transform(input_tensor)
+        >>> print(resized_tensor.shape)
+        torch.Size([1, 1, 64, 64, 64])
+
+        ### Resizing with a sampled `scale_factor`
+        >>> transform = Resize(scale_factor=Uniform(0.5, 4))
+        >>> resized_tensor = transform(input_tensor)
+        >>> print(resized_tensor)
+        torch.Size([1, 1, 74, 74, 74])
+
+        ### Resizing to a specific size
+        >>> transform = Resize(size=(96, 96, 96))
+        >>> resized_tensor = transform(input_tensor)
+        >>> print(resized_tensor)
+        torch.Size([1, 1, 96, 96, 96])
+
+        Notes
+        -----
+        - This class assumes the input tensor has batch and channel dimensions.
+        - It is not possible to define `size` and `scale_factor` simultaneously. Only one can be
+        defined for a given instatntiation of `Resize`.
+        - When defining `size` do not include batch or channel dimensions, only spatial dims.
         """
         super().__init__()
+        # Either scale factor or size must be defined. If neither is, make scale factor 1.
+        if size is None and scale_factor is None:
+            scale_factor = Fixed(1)
+        elif scale_factor is not None:
+            # Make a fixed if passed a single number. Maks sampler if passed sampler.
+            scale_factor = Fixed.make(scale_factor)
+
         self.size = size
         self.scale_factor = scale_factor
         self.mode = mode
@@ -503,7 +539,7 @@ class Resize(nn.Module):
         Parameters
         ----------
         input_tensor : torch.Tensor
-            The input tensor to be resized.
+            The input tensor to be resized. Must have batch and channel dimensions.
 
         Returns
         -------
@@ -513,13 +549,13 @@ class Resize(nn.Module):
         resized_tensor = F.interpolate(
             input=input_tensor,
             size=self.size,
-            scale_factor=self.scale_factor,
+            scale_factor=self.scale_factor(),
             mode=self.mode,
             align_corners=self.align_corners,
             recompute_scale_factor=self.recompute_scale_factor,
             antialias=self.antialias,
         )
-        raise resized_tensor
+        return resized_tensor
 
 
 class SoftQuantize(BaseTransform):
