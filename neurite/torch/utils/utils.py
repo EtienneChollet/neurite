@@ -34,13 +34,14 @@ __all__ = [
     'subsample_tensor_random_dims',
     'upsample_tensor',
     'make_range',
-    'random_clear_label'
+    'random_clear_label',
+    'sample_image_from_labels'
 ]
 
 from typing import Union
 import torch
 import torch.nn.functional as F
-from neurite.torch.random import Fixed, RandInt, Sampler
+from neurite.torch.random import Fixed, RandInt, Sampler, Normal, Uniform
 
 
 def identity(input_argument):
@@ -780,3 +781,58 @@ def random_clear_label(
         input_tensor.masked_fill_(label_tensor == label, 0)
 
     return input_tensor
+
+
+def sample_image_from_labels(
+    label_tensor: torch.Tensor,
+    mean_sampler: Sampler = Uniform(0, 1),
+    noise_sampler: Sampler = Normal,
+    noise_variance: Union[float, int, Sampler] = 0.25
+) -> torch.Tensor:
+    """
+    Sample textures/intensities from an integer label map.
+
+    This function identifies all unique integer labels in the `label_tensor`, and assigns each a
+    mean intensity to the labeled region in the corresponding output image (`sampled_image`). The
+    mean intensity serves as the mean for a noise distribution modeled by `noise_sampler`. The
+    variance of the noise model may be a fixed quantity or sampled from another distribution defined
+    by `noise_variance`.
+
+    Parameters
+    ----------
+    label_tensor : torch.Tensor
+        A tensor with batch and channel dimensions containing integer labels defining distinct
+        regions.
+    mean_sampler : Sampler
+        A `Sampler` from which to draw the mean intensity for each region defined by each label in
+        the `label_tensor`. By default, `Uniform(0, 1)`
+    noise_sampler : Sampler
+        A `Sampler` that is used to model the noise within a particular label/region. The mean for
+        the sampler is defined by the mean region intensity (sampled from `mean_sampler`).
+        By default, `Normal`.
+    noise_variance : float, int, or Sampler
+        The variance of the noise model. It can be a fixed quantity (int or float), or a sampled
+        quantity in the case a `Sampler` is passed. By default, 0.25.
+
+    Returns
+    -------
+    torch.Tensor
+        A tensor of sampled image intensities with the same shape as `label_tensor`.
+    """
+    # Extract unique labels
+    unique_labels = torch.unique(label_tensor)
+    # Initialize the sampled image
+    sampled_image = torch.zeros_like(label_tensor).float()
+    # Iteratevly texturize/sample intensities for each region as specified by a label
+    noise_variance = Fixed.make(noise_variance)
+    for label in unique_labels:
+        # Determine the mean value of the region
+        mean_region_intensity = mean_sampler()
+        # Sample the texturized region
+        texturized_redion = noise_sampler(
+            mean_region_intensity, noise_variance()
+        )(label_tensor[label_tensor == label].shape)
+        # Assign the textures to the region of the label
+        sampled_image[label_tensor == label] = texturized_redion
+
+    return sampled_image
