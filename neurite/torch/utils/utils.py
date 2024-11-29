@@ -51,10 +51,10 @@ def identity(input_argument):
 
 def soft_quantize(
     input_tensor: torch.Tensor,
-    nb_bins: Union[Sampler, int] = 16,
-    softness: Union[Sampler, int, float] = 1.0,
-    min_clip: Union[Sampler, int, float] = -float('inf'),
-    max_clip: Union[Sampler, int, float] = float('inf'),
+    nb_bins: Union[int, Sampler] = 16,
+    softness: Union[float, int, Sampler] = 1.0,
+    min_clip: Union[float, int, Sampler] = -float('inf'),
+    max_clip: Union[float, int, Sampler] = float('inf'),
     return_log: bool = False
 ) -> torch.Tensor:
     """
@@ -71,14 +71,14 @@ def soft_quantize(
     ----------
     input_tensor : torch.Tensor
         Input tensor to softly quantize.
-    nb_bins : Sampler or int or float, optional
+    nb_bins : float, int, or Sampler, optional
         The number of discrete bins to softly quantize the input values into. By default 16
-    softness : Sampler or int or float, optional
+    softness : float, int, or Sampler, optional
         The softness factor for quantization. A higher value gives smoother quantization.
         By default 1.0
-    min_clip : Sampler or int or float, optional
+    min_clip : float, int, or Sampler, optional
         Clip data lower than this value before calculating bin centers. By default -float('inf')
-    max_clip : Sampler or int or float, optional
+    max_clip : float, int, or Sampler, optional
         Clip data higher than this value before calculating bin centers. By default float('inf')
     return_log : bool, optional
         Optionally return the log of the softly quantized tensor. By default False
@@ -169,8 +169,8 @@ def mse_loss(input_tensor: torch.Tensor, target_tensor: torch.Tensor) -> torch.T
 
 
 def create_gaussian_kernel(
-    kernel_size: Union[Sampler, int] = 3,
-    sigma: Union[Sampler, int, float] = 1,
+    kernel_size: Union[int, Sampler] = 3,
+    sigma: Union[float, int, Sampler] = 1,
     ndim: int = 3,
     nchannels: int = 1
 ) -> torch.Tensor:
@@ -181,7 +181,7 @@ def create_gaussian_kernel(
     ----------
     kernel_size : Sampler or int, optional
         Size of Gaussian kernel. Default is 3.
-    sigma : Sampler or int or float, optional
+    sigma : float, int, or Sampler, optional
         Standard deviation of the Gaussian kernel. Default is 1.
     ndim : int
         Dimensionality of the gaussian kernel. Default is 3.
@@ -226,8 +226,8 @@ def create_gaussian_kernel(
 
 def gaussian_smoothing(
     input_tensor: torch.Tensor,
-    kernel_size: Union[Sampler, int] = 3,
-    sigma: Union[Sampler, int, float] = 1,
+    kernel_size: Union[int, Sampler] = 3,
+    sigma: Union[float, int, Sampler] = 1,
 ) -> torch.Tensor:
     """
     Applies Gaussian smoothing to the {1D, 2D, 3D} input tensor based on the given kernel size and
@@ -239,7 +239,7 @@ def gaussian_smoothing(
         The input tensor, assumed to be 1D, 2D, or 3D.
     kernel_size : Sampler or int, optional
         Size of the Gaussian kernel, default is 3.
-    sigma : Sampler or int or float, optional
+    sigma : float, int, or Sampler, optional
         Standard deviation of the Gaussian kernel, default is 1.
 
     Returns
@@ -477,7 +477,7 @@ def subsample_tensor_random_dims(
     input_tensor : torch.Tensor
         The input tensor to be subsampled. Assumed to have batch and channel dimensions.
     stride : Sampler or int or tuple optional
-        The stride value to use when subsampling a given dimension. Can be Sampler, int, or tuple
+        The stride value to use when subsampling a given dimension. Can be int, Sampler, or tuple
         corresponding to the range of strides to sample. By default, 2.
             - When stride is an int, the stride is considered to be fixed
             - When the stride is a tuple of two elements, the elements correspond to the upper and
