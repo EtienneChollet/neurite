@@ -433,24 +433,25 @@ class Negate(nn.Module):
         return -input_tensor
 
 
-class RescaleValues(nn.Module):
+class RescaleValues(BaseTransform):
     """
     A PyTorch module that rescales the values of the input tensor.
     """
 
-    def __init__(self, scale_factor: float):
+    def __init__(self, scale_factor: Union[float, int, Sampler]):
         """
         Initialize the `RescaleValues` module.
 
         Parameters
         ----------
-        scale_factor : float
-            Factor by which to rescale the values of the input tensor.
+        scale_factor : float, int, or Sampler
+            Factor (or sampler) by which to rescale the values of the input tensor.
         """
-        super().__init__()
-        self.scale_factor = scale_factor
+        super().__init__(
+            scale_factor=Fixed.make(scale_factor),
+            )
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+    def transform(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
         Performs the forward pass of the `RescaleValues` module.
 
@@ -464,7 +465,7 @@ class RescaleValues(nn.Module):
         torch.Tensor
             Rescaled tensor.
         """
-        raise input_tensor * self.scale_factor
+        return input_tensor * self.scale_factor()
 
 
 class Resize(nn.Module):
