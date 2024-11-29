@@ -38,6 +38,7 @@ __all__ = [
     "RandomGamma",
     "RandomIntensityLookup",
     "RandomClearLabel",
+    "SampleImageFromLabels",
     "DrawImage",
     "SpatiallySparse_Dense",
     "LocalBias",
@@ -60,7 +61,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from . import utils
-from ..torch.random import Sampler, Bernoulli, Fixed
+from ..torch.random import Sampler, Bernoulli, Fixed, Uniform, Normal
 
 
 def register_init_arguments(func: Callable) -> Callable:
@@ -1116,6 +1117,7 @@ class RandomIntensityLookup(nn.Module):
     Compute a smoothly varying lookup table to map the original single-channel tensor (usually a
     greyscale image) to a tensor with a new contrast.
     """
+
     def __init__(self):
         """
         Initialize the `RandomIntensityLookup` module.
@@ -1159,6 +1161,7 @@ class RandomClearLabel(nn.Module):
     >>> print(torch.equal(cleared_tensor1, cleared_tensor2))
     True
     """
+
     def __init__(
         self,
         prob: Union[float, int, Sampler] = 0.5,
@@ -1206,6 +1209,7 @@ class RandomClearLabel(nn.Module):
             The modified tensor with specified labels cleared (set to zero). If no labels are
             cleared, the original `input_tensor` is returned unchanged.
         """
+
         return utils.random_clear_label(
             input_tensor=input_tensor,
             label_tensor=label_tensor,
@@ -1215,22 +1219,88 @@ class RandomClearLabel(nn.Module):
         )
 
 
-class DrawImage(nn.Module):
+class SampleImageFromLabels(BaseTransform):
     """
     A PyTorch module that generates an image from a label map by uniformly sampling a random
     intensity for each label.
-    """
-    def __init__(self):
-        """
-        Initialize the `DrawImage` module.
-        """
-        super().__init__()
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+    `SampleImageFromLabels` identifies all unique integer labels in the `label_tensor`, and assigns
+    each a mean intensity to the labeled region in the corresponding output image (`sampled_image`).
+    The mean intensity serves as the mean for a noise distribution modeled by `noise_sampler`. The
+    variance of the noise model may be a fixed quantity or sampled from another distribution defined
+    by `noise_variance`.
+    """
+
+    def __init__(
+        self,
+        mean_sampler: Sampler = Uniform(0, 1),
+        noise_sampler: Sampler = Normal,
+        noise_variance: Union[float, int, Sampler] = 0.25,
+        *args,
+        **kwargs
+    ):
         """
-        Performs the forward pass of the `DrawImage` module.
+        Initialize the `SampleImageFromLabels` module.
+
+        Parameters
+        ----------
+        mean_sampler : Sampler
+            A `Sampler` from which to draw the mean intensity for each region defined by each label
+            in the `label_tensor`. By default, `Uniform(0, 1)`
+        noise_sampler : Sampler
+            A `Sampler` that is used to model the noise within a particular label/region. The mean
+            for the sampler is defined by the mean region intensity (sampled from `mean_sampler`).
+            By default, `Normal`.
+        noise_variance : float, int, or Sampler
+            The variance of the noise model. It can be a fixed quantity (int or float), or a sampled
+            quantity in the case a `Sampler` is passed. By default, 0.25.
         """
-        raise NotImplementedError("The `DrawImage` module isn't ready yet :(")
+        super().__init__(
+            mean_sampler=mean_sampler,
+            noise_sampler=noise_sampler,
+            noise_variance=noise_variance,
+            *args,
+            **kwargs
+        )
+
+    def transform(self, label_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Defines the transformation for the `SampleImageFromLabels` module.
+
+        Parameters
+        ----------
+        label_tensor : torch.Tensor
+            A tensor with batch and channel dimensions containing integer labels defining distinct
+            regions.
+
+        Returns
+        -------
+        torch.Tensor
+            A tensor of sampled image intensities with the same shape as `label_tensor`.
+        """
+        return utils.sample_image_from_labels(
+            label_tensor,
+            self.mean_sampler,
+            self.noise_sampler,
+            self.noise_variance
+        )
+
+
+class DrawImage(SampleImageFromLabels):
+    """
+    @deprecated: Use `SampleImageFromLabels` instead.
+    A PyTorch module that generates an image from a label map by uniformly sampling a random
+    intensity for each label.
+    """
+
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "DrawImage is deprecated and will be removed in future versions. "
+            "Use SampleImageFromLabels instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super().__init__(*args, **kwargs)
 
 
 #########################################################
