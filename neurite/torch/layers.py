@@ -582,10 +582,10 @@ class SoftQuantize(BaseTransform):
 
     def __init__(
         self,
-        nb_bins: Union[Sampler, int] = 16,
-        softness: Union[Sampler, int, float] = 1.0,
-        min_clip: Union[Sampler, int, float] = -float('inf'),
-        max_clip: Union[Sampler, int, float] = float('inf'),
+        nb_bins: Union[int, Sampler] = 16,
+        softness: Union[float, int, Sampler] = 1.0,
+        min_clip: Union[float, int, Sampler] = -float('inf'),
+        max_clip: Union[float, int, Sampler] = float('inf'),
         return_log: bool = False,
         *args,
         **kwargs
@@ -595,14 +595,14 @@ class SoftQuantize(BaseTransform):
 
         Parameters
         ----------
-        nb_bins : Sampler or int or float, optional
+        nb_bins : int or Sampler, optional
             The number of discrete bins to softly quantize the input values into. By default 16
-        softness : Sampler or int or float, optional
+        softness : float, int, or Sampler, optional
             The softness factor for quantization. A higher value gives smoother quantization.
             By default 1.0
-        min_clip : Sampler or int or float, optional
+        min_clip : float, int, or Sampler, optional
             Clip data lower than this value before calculating bin centers. By default -float('inf')
-        max_clip : Sampler or int or float, optional
+        max_clip : float, int, or Sampler, optional
             Clip data higher than this value before calculating bin centers. By default float('inf')
         return_log : bool, optional
             Optionally return the log of the softly quantized tensor. By default False
@@ -707,7 +707,7 @@ class GaussianBlur(BaseTransform):
         ----------
         kernel_size : Sampler or int, optional
             Size of the Gaussian kernel, default is 3.
-        sigma : Sampler or int or float, optional
+        sigma : float, int, or Sampler, optional
             Standard deviation of the Gaussian kernel, default is 1.
         """
         super().__init__(
@@ -885,7 +885,7 @@ class RandomCrop(BaseTransform):
         crop_proportion: Union[Sampler, float] = 0.5,
         prob: Union[Sampler, float] = 1,
         forbidden_dims: Union[Tuple, List] = (0, 1),
-        seed: Union[Sampler, int] = None,
+        seed: Union[int, Sampler] = None,
     ):
         """
         Initialize the `RandomCrop` module.
@@ -908,7 +908,7 @@ class RandomCrop(BaseTransform):
         forbidden_dims : Union[Tuple[int, ...], List[int]], optional
             Dimensions that should never be cropped. By defult `(0, 1)` (batch and channel
             dimensions)
-        seed : Union[Sampler, int], optional
+        seed : Union[int, Sampler], optional
             A random seed or sampler to control the randomness of cropping operations. If provided,
             it ensures reproducibility of the cropping. Defaults to `None`.
         """
