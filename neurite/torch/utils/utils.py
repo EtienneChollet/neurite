@@ -210,14 +210,12 @@ def create_gaussian_kernel(
 
     # Calculate the Gaussian function
     kernel = torch.exp(-((grid ** 2).sum(-1) / (2 * sigma ** 2)))
-
     # Normalize the kernel so that the sum of all elements is 1
     kernel = kernel / kernel.sum()
-
     # Reshape to 5D tensor for conv3d
     kernel = kernel.view(1, 1, *([kernel_size] * ndim))
-    # Repeat the kernel for each channel (depth-wise convolution)
 
+    # Repeat the kernel for each channel (depth-wise convolution)
     if nchannels > 1:
         kernel = kernel.repeat(nchannels, nchannels, *([1] * ndim))
 
@@ -258,7 +256,6 @@ def gaussian_smoothing(
     # Sampling parameters
     kernel_size = Fixed.make(kernel_size)()
     sigma = Fixed.make(sigma)()
-
     # Infer dimensionality in voxel/pixel space. Squeeze to remove batch and/or channel dims.
     ndim = input_tensor.dim() - 2
 
@@ -276,17 +273,20 @@ def gaussian_smoothing(
     padding = torch.tensor(padding).repeat(ndim * 2)
     # Convert to tuple (F.pad takes a tuple of ints, not tensors)
     padding = tuple(padding.tolist())
+
     # Pad `input_tensor`
     padded_input_tensor = F.pad(input_tensor, padding, mode='reflect')
 
     # Make dictionary for the different convolution dimensionalities
     conv_fn = {1: F.conv1d, 2: F.conv2d, 3: F.conv3d}[ndim]
+
     # Apply the smoothig operation
     smoothed_tensor = conv_fn(
         input=padded_input_tensor,
         weight=gaussian_kernel,
         padding=0,
     )
+
     return smoothed_tensor
 
 
@@ -320,8 +320,10 @@ def bernoulli(p: float = 0.5, shape: tuple = (1,)) -> torch.Tensor:
     # Make sampling domain.
     # Each element in this tensor represents the probability of realizing a 1.
     sampling_domain = torch.tensor(p).repeat(shape)
+
     # Sample from the bernoulli distribution
     bernoulli_result = torch.bernoulli(sampling_domain)
+
     return bernoulli_result
 
 
@@ -378,27 +380,32 @@ def apply_bernoulli_mask(input_tensor, p: float = 0.5, returns: str = None) -> t
     """
     # Sample the Bernoulli mask with parameter `p`
     bernoulli_mask = bernoulli(p=p, shape=input_tensor.shape)
+
     # Clone the input tensor for future computations
     masked = torch.clone(input_tensor)
 
     if returns == 'successes':
         # Get all elements from `input_tensor` corresponding to Bernoulli failures.
         masked = masked[bernoulli_mask == 1]
+
     elif returns == 'failures':
         # Get all elements from `input_tensor` corresponding to Bernoulli failures.
         masked = masked[bernoulli_mask == 0]
+
     elif returns is None:
         # Drop out (zero) all bernoulli failures.
         masked[bernoulli_mask == 0] = 0
+
     else:
         raise ValueError(f"{returns} isn't supported!")
+
     return masked
 
 
 def subsample_tensor(
-        input_tensor: torch.Tensor,
-        subsampling_dimension: int = 0,
-        stride: int = 2
+    input_tensor: torch.Tensor,
+    subsampling_dimension: int = 0,
+    stride: int = 2
 ) -> torch.Tensor:
     """
     Subsamples `input_tensor` by a factor `stride` along the specified dimension.
@@ -453,10 +460,13 @@ def subsample_tensor(
     """
     # Make a list of slices that we will modify individually.
     slices = [slice(None)] * input_tensor.ndim
+
     # Slice the `axis` dimension with a given step size. Keep everything else the same.
     slices[subsampling_dimension] = slice(None, None, stride)
+
     # Slice the `input_tensor` with all slices to make the subsampled tensor.
     subsampled_tensor = input_tensor[tuple(slices)]
+
     return subsampled_tensor
 
 
@@ -529,9 +539,11 @@ def subsample_tensor_random_dims(
     if max_concurrent_subsamplings is None:
         # If None, we will subsample at most *all* of them (at once!)
         max_concurrent_subsamplings = input_tensor.dim()
+
     elif max_concurrent_subsamplings <= input_tensor.dim():
         # Great. It's already defined :)
         pass
+
     elif max_concurrent_subsamplings > input_tensor.dim():
         # Sometimes, you might try to define a `max_concurrent_subsamplings` that's not possible :(
         raise ValueError(
@@ -570,12 +582,15 @@ def subsample_tensor_random_dims(
 
     # Perform the subsampling.
     for dimension in dimensions_to_subsample:
+        # Sample the stride
         sampled_stride = stride_sampler()
+        # Apply the subsampling operation
         input_tensor = subsample_tensor(
             input_tensor,
             subsampling_dimension=dimension,
             stride=sampled_stride
         )
+
     return input_tensor
 
 
@@ -622,8 +637,10 @@ def upsample_tensor(
             f"Unsupported tensor dimensionality: {spatial_dims} spatial dimensions. "
             "Only 1D, 2D, and 3D tensors are supported."
         )
+
     # Perform the upsampling operation
     upsampled = F.interpolate(input_tensor, size=shape, mode=mode)
+
     return upsampled
 
 
@@ -669,6 +686,7 @@ def make_range(*args, **kwargs) -> tuple:
             return arg
         elif isinstance(arg, (list, tuple)):
             return arg
+
     # Return keyword arguments of type {Sampler, list, tuple} as-is
     for arg in kwargs.values():
         if isinstance(arg, Sampler):
@@ -681,6 +699,7 @@ def make_range(*args, **kwargs) -> tuple:
     # Handle positional arguments
     if len(args) == 2:
         min, max = args
+
     elif len(args) == 1:
         if isinstance(args[0], list | tuple):
             # if the argument is a list, unpack it:
@@ -769,13 +788,16 @@ def random_clear_label(
         if isinstance(seed, Sampler):
             seed = seed()
         torch.manual_seed(seed)
+
     # Determine all unique labels
     unique_labels = torch.unique(label_tensor)
     # Optionally exclude zero label (usually background)
     if exclude_zero:
         unique_labels = unique_labels[unique_labels != 0]
+
     # Apply Bernoulli mask to determine which labels to clear
     labels_to_clear = apply_bernoulli_mask(unique_labels, prob, returns='successes')
+
     # Clear the specified labels in the input tensor
     for label in labels_to_clear:
         input_tensor.masked_fill_(label_tensor == label, 0)
@@ -819,19 +841,24 @@ def sample_image_from_labels(
     torch.Tensor
         A tensor of sampled image intensities with the same shape as `label_tensor`.
     """
+    # Make the variance
+    noise_variance = Fixed.make(noise_variance)
     # Extract unique labels
     unique_labels = torch.unique(label_tensor)
+
     # Initialize the sampled image
     sampled_image = torch.zeros_like(label_tensor).float()
+
     # Iteratevly texturize/sample intensities for each region as specified by a label
-    noise_variance = Fixed.make(noise_variance)
     for label in unique_labels:
         # Determine the mean value of the region
         mean_region_intensity = mean_sampler()
+
         # Sample the texturized region
         texturized_redion = noise_sampler(
             mean_region_intensity, noise_variance()
         )(label_tensor[label_tensor == label].shape)
+
         # Assign the textures to the region of the label
         sampled_image[label_tensor == label] = texturized_redion
 
