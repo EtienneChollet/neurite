@@ -449,7 +449,7 @@ class RescaleValues(BaseTransform):
         """
         super().__init__(
             scale_factor=Fixed.make(scale_factor),
-            )
+        )
 
     def transform(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
