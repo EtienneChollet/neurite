@@ -1,5 +1,5 @@
 """
-Utilities for the neurite project.
+Functional utilities for the neurite project.
 
 Citation
 --------
