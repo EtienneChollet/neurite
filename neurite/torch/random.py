@@ -25,7 +25,8 @@ SamplerType = TypeVar('SamplerType', bound='Sampler')
 def register_init_arguments(func: Callable) -> Callable:
     """
     Decorator to register initialization arguments into the instance's `arguments` dict.
-    It unpacks `**theta` and stores each parameter individually.
+
+    This decorator unpacks a mapping of arbitrary parameters `**theta` and stores each individually.
     If a parameter is an instance of Sampler, it recursively registers its arguments.
     """
     @wraps(func)
@@ -62,15 +63,19 @@ def register_init_arguments(func: Callable) -> Callable:
             self.arguments[key] = value
 
         return result
+
     return wrapper
 
 
 def ensure_list(x, size=None, crop=True, **kwargs):
-    """Ensure that an object is a list (of size at last dim)
+    """
+    Ensure that an object is a list (of size at last dim).
 
-    If x is a list, nothing is done (no copy triggered).
-    If it is a tuple, it is converted into a list.
-    Otherwise, it is placed inside a list.
+    Notes
+    -----
+    - If `x` is a list, nothing is done and `x` is returned as-is (no copy triggered).
+    - If `x` is a tuple, it is converted into a list.
+    - Otherwise, it is placed inside a list.
     """
     if not isinstance(x, (list, tuple, range, Generator)):
         x = [x]
@@ -81,6 +86,7 @@ def ensure_list(x, size=None, crop=True, **kwargs):
         x += [default] * (size - len(x))
     if size and crop:
         x = x[:size]
+
     return x
 
 
@@ -157,9 +163,11 @@ class Sampler:
         if isinstance(maker_input, Sampler):
             # If it's a `Sampler`, return as-is
             return maker_input
+
         elif isinstance(maker_input, dict):
             # Interpret dict as kwargs
             return cls(**maker_input)
+
         elif isinstance(maker_input, tuple):
             # Interpret as positional args
             if len(maker_input) > 2:
@@ -167,6 +175,7 @@ class Sampler:
                     f"make expected at most 2 positional arguments in tuple, got {len(maker_input)}"
                 )
             return cls(*maker_input)
+
         else:
             # Pass as single positional arg
             return cls(maker_input)
@@ -196,30 +205,37 @@ class Sampler:
         Dict[str, List[Any]]
             A dictionary with all parameter lists adjusted to have the same length.
         """
-        # We'll need to make sure `theta` is a dict
+        # `theta` needs to be a dict
         theta = dict(theta)
+
+        # Ensure all parameter lists have a specified or congruent number of elements.
         if nsamples:
             # We need to bring all params to the known length of `nsamples`
             # Validating `nsamples`
             if not isinstance(nsamples, int) or nsamples <= 0:
                 raise ValueError(f"`num_samples` must be a positive integer, got {nsamples}")
+
             # Make sure all param lists have length `nsamples`
             for param_name, param_value in theta.items():
                 theta[param_name] = ensure_list(param_value, nsamples)
+
         else:
             # We need to determine the max len among all parameter lists (since it's not specified)
             max_length = 0
             for param_value in theta.values():
                 if isinstance(param_value, (list, tuple)):
                     max_length = max(max_length, len(param_value))
+
             if max_length == 0:
                 # All parameters are single values; convert them to single-element lists
                 for param_name, param_value in theta.items():
                     theta[param_name] = ensure_list(param_value)
+
             else:
                 # Adjust all parameters to the maximum length found
                 for param_name, param_value in theta.items():
                     theta[param_name] = ensure_list(param_value, max_length)
+
         return theta
 
     @classmethod
@@ -396,6 +412,7 @@ class Sampler:
             # The sampler's parameters
             'theta': self.arguments,
         }
+
         return state_dict
 
 
@@ -460,12 +477,18 @@ class Uniform(Sampler):
                 [ 0.4567,  1.2345]])
         """
         super().__init__(min_val=min_val, max_val=max_val)
+
         # Validate parameters
         if not isinstance(min_val, (int, float)):
+            # min_val is not an integer or floating point.
             raise TypeError(f"`min_val` must be an int or float, got {type(min_val).__name__}")
+
         if not isinstance(max_val, (int, float)):
+            # max_val is not an integer or floating point.
             raise TypeError(f"`max_val` must be an int or float, got {type(max_val).__name__}")
+
         if max_val <= min_val:
+            # max_val is less than min_val.
             raise ValueError("`max_val` must be greater than `min_val`.")
 
     def _sample(self, shape: list, **backend) -> torch.Tensor:
@@ -484,6 +507,7 @@ class Uniform(Sampler):
         """
         min_val = self.theta.get('min_val')
         max_val = self.theta.get('max_val')
+
         return torch.rand(*shape, **backend) * (max_val - min_val) + min_val
 
 
@@ -560,6 +584,7 @@ class Fixed(Sampler):
         """
         # Extract `value`
         value = self.theta.get('value')
+
         return torch.full(shape, fill_value=value, **backend)
 
 
@@ -626,6 +651,7 @@ class Normal(Sampler):
                 [-0.1234, -1.6789, -1.3456]])
         """
         super().__init__(mean=mean, variance=variance)
+
         # Validate parameters
         if not isinstance(mean, (int, float)):
             raise TypeError(f"`mean` must be an int or float, got {type(mean).__name__}")
@@ -654,6 +680,7 @@ class Normal(Sampler):
         # Calculate sigma
         sigma = variance ** 0.5
         distribution = torch.distributions.Normal(loc=mean, scale=sigma)
+
         return distribution.sample(shape)
 
 
@@ -708,13 +735,14 @@ class Bernoulli(Sampler):
                 [1, 1, 0]])
         """
         super().__init__(p=p)
+
         # Validate parameter
         if not isinstance(p, (int, float)):
             raise TypeError(f"`p` must be an int or float, got {type(p).__name__}")
         if not 0 <= p <= 1:
             raise ValueError("`p` must be between 0 and 1 inclusive.")
 
-    def _sample(self, shape, returns: torch.dtype = torch.int, **backend):
+    def _sample(self, shape, **backend):
         """
         Generates samples from a Bernoulli distribution based on probability `p`.
 
@@ -731,7 +759,8 @@ class Bernoulli(Sampler):
         # Extract parameter
         p = self.theta.get('p')
         distribution = torch.distributions.Bernoulli(probs=p)
-        samples = distribution.sample(shape).to(returns)
+        samples = distribution.sample(shape).int()
+
         return samples
 
 
@@ -783,6 +812,7 @@ class Poisson(Sampler):
                 [4, 2, 5]])
         """
         super().__init__(rate=rate)
+
         # Validate parameter
         if not isinstance(rate, (int, float)):
             raise TypeError(f"`rate` must be an int or float, got {type(rate).__name__}")
@@ -807,6 +837,7 @@ class Poisson(Sampler):
         rate = self.theta.get('rate')
         distribution = torch.distributions.Poisson(rate=rate)
         samples = distribution.sample(shape)
+
         return samples.int()
 
 
@@ -876,6 +907,7 @@ class LogNormal(Sampler):
                 [1.1052, 0.6065, 1.6487]])
         """
         super().__init__(mean=mean, variance=variance)
+
         # Validate parameters
         if not isinstance(mean, (int, float)):
             raise TypeError(f"`mean` must be an int or float, got {type(mean).__name__}")
@@ -907,6 +939,7 @@ class LogNormal(Sampler):
         distribution = torch.distributions.LogNormal(loc=mean, scale=sigma)
         # Sample from the distribution
         samples = distribution.sample(shape, **backend)
+
         return samples
 
 
@@ -996,6 +1029,7 @@ class RandInt(Sampler):
             If `high` is not greater than `low`.
         """
         super().__init__(low=low, high=high)
+
         # Validate parameters
         if not isinstance(low, int):
             raise TypeError(f"`low` must be an int, got {type(low).__name__}")
@@ -1023,6 +1057,8 @@ class RandInt(Sampler):
         # Extract parameters
         low = self.theta.get('low', 0)
         high = self.theta.get('high', 10)
+
         # Generate samples using torch.randint
         samples = torch.randint(low=low, high=high, size=shape, **backend)
+
         return samples
