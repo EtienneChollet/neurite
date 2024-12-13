@@ -1004,29 +1004,6 @@ class RandInt(Sampler):
         >>> print(tensor_samples)
         tensor([[150, 123, 178],
                 [199, 101, 156]])
-    """
-    def __init__(
-        self,
-        low: int = 0,
-        high: int = 10
-    ):
-        """
-        Initializes the RandInt sampler with specified lower and upper bounds.
-
-        Parameters
-        ----------
-        low : int, optional
-            The inclusive lower bound of the integer range. Default is 0.
-        high : int, optional
-            The exclusive upper bound of the integer range. Must be greater than `low`.
-            Default is 10.
-
-        Raises
-        ------
-        TypeError
-            If `low` or `high` is not an integer.
-        ValueError
-            If `high` is not greater than `low`.
         """
         super().__init__(low=low, high=high)
 
