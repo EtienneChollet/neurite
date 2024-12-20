@@ -1,13 +1,20 @@
 """
-`neurite/torch` is the package of neurite that handles its PyTorch
-implementation.
+`neurite/torch` is the package of neurite that handles its PyTorch implementation.
 
 Modules
 -------
 layers
-    Foundational layers for constructing neural networks.
+    Transformations and augmentations for model training.
 losses
     Loss functions for various learning objectives.
+random
+    Utilities for random sampling, distributions, and random number generation for augmentations and
+    model training.
+utils
+    Helper functions and utilities for common PyTorch operations, including tensor manipulation.
+modules
+    Foundational, trainable layers for constructing neural networks, including normalization
+    layers and convolutional blocks.
 """
 # Importing modules
 from . import layers
