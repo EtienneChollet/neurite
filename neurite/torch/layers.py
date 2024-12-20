@@ -41,11 +41,6 @@ __all__ = [
     "SampleImageFromLabels",
     "DrawImage",
     "Norm",
-    "LocalBias",
-    "LocalLinear",
-    "LocallyConnected3D",
-    "LocalCrossLinear",
-    "LocalCrossLinearTrf",
     "LocalParamLayer",
     "LocalParamWithInput",
     "MeanStream",
@@ -1468,97 +1463,6 @@ class Norm(nn.Module):
 #########################################################
 # "Local" layers -- layers with parameters at each voxel
 #########################################################
-
-
-class LocalBias(nn.Module):
-    """
-    A PyTorch module that applies biases to tensor elements independently.
-    """
-    def __init__(self):
-        """
-        Initialize the `LocalBias` module.
-        """
-        super().__init__()
-
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
-        """
-        Performs the forward pass of the `LocalBias` module.
-        """
-        raise NotImplementedError("The `LocalBias` module isn't ready yet :(")
-
-
-# TODO: Make into AffineLayer and generalize to nD.
-class LocalLinear(nn.Module):
-    """
-    A PyTorch module that applies linear transformations to tensor elements independently.
-    """
-    def __init__(self):
-        """
-        Initialize the `LocalLinear` module.
-        """
-        super().__init__()
-
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
-        """
-        Performs the forward pass of the `LocalLinear` module.
-        """
-        raise NotImplementedError("The `LocalLinear` module isn't ready yet :(")
-
-
-class LocallyConnected3D(nn.Module):
-    """
-    A PyTorch module for unshared convolutions.
-
-    Notes
-    -----
-    - The `LocallyConnected3D` layer works similarly to the `Conv3D` layer, except that weights are
-    unshared, that is, a different set of filters is applied at each different patch of the input.
-    """
-    def __init__(self):
-        """
-        Initialize the `LocallyConnected3D` module.
-        """
-        super().__init__()
-
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
-        """
-        Performs the forward pass of the `LocallyConnected3D` module.
-        """
-        raise NotImplementedError("The `LocallyConnected3D` module isn't ready yet :(")
-
-
-class LocalCrossLinear(nn.Module):
-    """
-    A PyTorch module that ...
-    """
-    def __init__(self):
-        """
-        Initialize the `LocalCrossLinear` module.
-        """
-        super().__init__()
-
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
-        """
-        Performs the forward pass of the `LocalCrossLinear` module.
-        """
-        raise NotImplementedError("The `LocalCrossLinear` module isn't ready yet :(")
-
-
-class LocalCrossLinearTrf(nn.Module):
-    """
-    A PyTorch module that ...
-    """
-    def __init__(self):
-        """
-        Initialize the `LocalCrossLinearTrf` module.
-        """
-        super().__init__()
-
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
-        """
-        Performs the forward pass of the `LocalCrossLinearTrf` module.
-        """
-        raise NotImplementedError("The `LocalCrossLinearTrf` module isn't ready yet :(")
 
 
 class LocalParamLayer(nn.Module):
