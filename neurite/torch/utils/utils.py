@@ -35,10 +35,12 @@ __all__ = [
     'upsample_tensor',
     'make_range',
     'random_clear_label',
-    'sample_image_from_labels'
+    'sample_image_from_labels',
+    'is_instantiated_normalization'
 ]
 
 from typing import Union
+import inspect
 import torch
 import torch.nn.functional as F
 from neurite.torch.random import Fixed, RandInt, Sampler, Normal, Uniform
@@ -863,3 +865,25 @@ def sample_image_from_labels(
         sampled_image[label_tensor == label] = texturized_redion
 
     return sampled_image
+
+
+def is_instantiated_normalization(obj: object) -> bool:
+    """
+    Determine if an object is a normalization layer that has been instantiated.
+
+    Parameters
+    ----------
+    obj : object
+        Object to checked.
+
+    Returns
+    -------
+    bool
+        Whether the object is an instantiated normalization layer or not.
+    """
+    # Get all classes from torch.nn.modules.normalization
+    normalization_classes = tuple(
+        cls for _, cls in inspect.getmembers(torch.nn.modules.normalization, inspect.isclass)
+        if issubclass(cls, torch.nn.Module)
+    )
+    return isinstance(obj, normalization_classes)
