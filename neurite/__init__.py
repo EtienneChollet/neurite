@@ -40,6 +40,7 @@ if backend == 'pytorch':
         raise ImportError('Please install pytorch to use this neurite backend')
 
     from . import torch
+    from .torch import *
 else:
     # tensorflow is default backend
     try:
