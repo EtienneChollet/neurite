@@ -40,7 +40,6 @@ __all__ = [
     "RandomClearLabel",
     "SampleImageFromLabels",
     "DrawImage",
-    "SpatiallySparse_Dense",
     "LocalBias",
     "LocalLinear",
     "LocallyConnected3D",
@@ -1298,28 +1297,6 @@ class DrawImage(SampleImageFromLabels):
             stacklevel=2
         )
         super().__init__(*args, **kwargs)
-
-
-#########################################################
-# Sparse layers
-#########################################################
-
-
-class SpatiallySparse_Dense(nn.Module):
-    """
-    A Densely connected layer with sparse observations.
-    """
-    def __init__(self):
-        """
-        Initialize the `SpatiallySparse_Dense` module.
-        """
-        super().__init__()
-
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
-        """
-        Performs the forward pass of the `SpatiallySparse_Dense` module.
-        """
-        raise NotImplementedError("The `SpatiallySparse_Dense` module isn't ready yet :(")
 
 
 #########################################################
