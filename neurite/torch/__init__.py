@@ -13,3 +13,7 @@ losses
 from . import layers
 from . import losses
 from . import random
+from . import utils
+from . import modules
+
+from .utils import *
