@@ -40,6 +40,7 @@ __all__ = [
     "RandomClearLabel",
     "SampleImageFromLabels",
     "DrawImage",
+    "Norm",
     "LocalBias",
     "LocalLinear",
     "LocallyConnected3D",
@@ -54,7 +55,7 @@ __all__ = [
 
 import inspect
 import warnings
-from typing import Optional, Union, Tuple, Callable, List
+from typing import Optional, Union, Tuple, Callable, List, Type
 from functools import wraps
 import torch
 from torch import nn
@@ -1297,6 +1298,171 @@ class DrawImage(SampleImageFromLabels):
             stacklevel=2
         )
         super().__init__(*args, **kwargs)
+
+
+class Norm(nn.Module):
+    """
+    Dynamically constructs a normalization layer based on `norm_type` and `ndim`.
+
+    Supports
+    --------
+    - 'batch': BatchNorm1d, BatchNorm2d, BatchNorm3d (requires `ndim`)
+    - 'instance': InstanceNorm1d, InstanceNorm2d, InstanceNorm3d (requires `ndim`)
+    - 'layer': LayerNorm (does not use `ndim`)
+    - 'group': GroupNorm (requires `num_groups`)
+
+    The user can also provide a custom `nn.Module` class in `norm_type`.
+    """
+
+    # Map normalization types and dimensions for their corresponding PyTorch classes
+    NORMALIZATION_MAP = {
+        "batch": {
+            1: nn.BatchNorm1d,
+            2: nn.BatchNorm2d,
+            3: nn.BatchNorm3d,
+        },
+        "instance": {
+            1: nn.InstanceNorm1d,
+            2: nn.InstanceNorm2d,
+            3: nn.InstanceNorm3d,
+        },
+        "layer": nn.LayerNorm,
+        "group": nn.GroupNorm
+    }
+
+    def __init__(
+        self,
+        norm_type: Union[str, Type[nn.Module]],
+        ndim: Optional[int] = None,
+        num_features: Optional[int] = None,
+        num_groups: Optional[int] = None,
+        eps: float = 1e-5,
+        affine: bool = True,
+        **kwargs
+    ):
+        """
+        Initialize the `Norm` module.
+
+        Parameters
+        ----------
+        norm_type : str or nn.Module
+            Type of normalization. Must be one of 'batch', 'instance', 'layer',
+            'group', or a custom `nn.Module` class.
+        ndim : int, optional
+            Dimensionality for batch/instance normalization:
+            - 1 -> *Norm1d
+            - 2 -> *Norm2d
+            - 3 -> *Norm3d
+            Required for 'batch' or 'instance' norms.
+        num_features : int, optional
+            Number of input features or channels. Required for 'batch', 'instance',
+            'layer', and 'group' normals. For layer norm, this is the size of the
+            normalized dimension. For batch and instance norms, this is typically the
+            number of channels/features.
+        num_groups : int, optional
+            Number of groups for GroupNorm. Required for 'group' normalization.
+        eps : float, optional
+            A value added to the denominator for numerical stability. Default is 1e-5.
+        affine : bool, optional
+            If True, the layer has learnable affine parameters. Default is True.
+        **kwargs : dict, optional
+            Additional keyword arguments are passed directly to the normalization class
+            constructor. This enables further customization without modifying this class.
+
+        Examples
+        --------
+        >>> # Dummy input of shape (B, C, H, W)
+        >>> x = torch.randn(1, 16, 32, 32)
+
+        ### Using a custom, pre-instantiated normalization layer
+        >>> norm_a = nn.InstanceNorm2d(16)
+        >>> norm_A = Norm(norm_a)
+        >>> norm_A(x)
+        ...
+
+        ### Using a custom normalization layer that has not been instantiated
+        >>> norm_b = nn.InstanceNorm2d
+        >>> norm_B = Norm(norm_b, num_features=16)
+        >>> norm_B(x)
+        ...
+
+        ### Using the wrapper to define a normalization layer
+        >>> norm_C = Norm(norm_type='instance', ndim=2, num_features=16)
+        >>> norm_C(x)
+        ...
+        """
+        super().__init__()
+
+        # Norm object has been instantiated with parameters
+        if utils.is_instantiated_normalization(norm_type):
+            self.norm = norm_type
+            return
+
+        # Norm object has been provided but not instantiated
+        if isinstance(norm_type, type) and issubclass(norm_type, nn.Module):
+            # Assume user provided a custom normalization class directly
+            if num_features is None:
+                raise ValueError("`num_features` must be specified for custom norms.")
+            self.norm = norm_type(num_features=num_features, eps=eps, affine=affine, **kwargs)
+            return
+
+        # Handle known norm_types
+        if norm_type not in self.NORMALIZATION_MAP:
+            raise ValueError(
+                f"Invalid norm_type '{norm_type}'. Must be one of "
+                f"{list(self.NORMALIZATION_MAP.keys())} or a custom nn.Module subclass."
+            )
+
+        # Batch and instance norm require an input dimensionality
+        if norm_type in ("batch", "instance"):
+            if ndim not in (1, 2, 3):
+                raise ValueError(
+                    "For 'batch' or 'instance' normalization, ndim must be 1, 2, or 3."
+                )
+            # They also require the number of features
+            if num_features is None:
+                raise ValueError("`num_features` must be specified for 'batch' or 'instance' norm.")
+
+            norm_class = self.NORMALIZATION_MAP[norm_type][ndim]
+            self.norm = norm_class(
+                num_features=num_features, eps=eps, affine=affine, **kwargs
+            )
+
+        elif norm_type == "layer":
+            if num_features is None:
+                raise ValueError(
+                    "`num_features` (normalized shape) must be specified for 'layer' norm."
+                )
+            self.norm = nn.LayerNorm(
+                num_features, eps=eps, elementwise_affine=affine, **kwargs
+            )
+
+        elif norm_type == "group":
+            if num_groups is None:
+                raise ValueError("For 'group' normalization, `num_groups` must be specified.")
+            if num_features is None:
+                raise ValueError("`num_features` must be specified for 'group' norm.")
+            self.norm = nn.GroupNorm(num_groups, num_features, eps=eps, affine=affine, **kwargs)
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for the normalization layer.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            Input tensor to be normalized. The shape depends on the normalization type:
+            - For 1D norms: (N, C, L)
+            - For 2D norms: (N, C, H, W)
+            - For 3D norms: (N, C, D, H, W)
+            - For layer/group norms: shape can vary, but typically (N, *)
+
+        Returns
+        -------
+        torch.Tensor
+            Normalized output tensor.
+        """
+        return self.norm(input_tensor)
 
 
 #########################################################
