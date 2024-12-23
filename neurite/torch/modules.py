@@ -89,6 +89,7 @@ class Conv(nn.Module):
 
         # Import the convolution class with appropriate number of spatial dimensions
         self.conv = getattr(nn, conv_attr_name)
+
         # Init the conv class with necessary input arguments
         self.conv = self.conv(
             in_channels,
@@ -246,11 +247,18 @@ class ConvBlock(nn.Sequential):
         torch.Size([1, 32, 64, 64])
 
         ### Omitting normalization or activation:
-        >>> conv_block = ConvBlock(ndim=2, in_channels=16, out_channels=32, norm=None, activation=None)
+        >>> conv_block = ConvBlock(
+            ndim=2,
+            in_channels=16,
+            out_channels=32,
+            norm=None,
+            activation=None
+        )
         >>> output_tensor = conv_block(input_tensor)
         >>> print(output_tensor.shape)
         torch.Size([1, 32, 64, 64])
         """
+        super().__init__()
         self.order = order
         if order is None:
             order = ['cna']
@@ -274,11 +282,13 @@ class ConvBlock(nn.Sequential):
                     padding=padding, dilation=dilation, groups=groups, bias=bias
                 )
                 layers.append(conv)
+
             elif operation == 'n':
                 # Make normalization
                 if norm is not None:
                     norm_layer = Norm(norm, ndim, out_channels)
                     layers.append(norm_layer)
+
             elif operation == 'a':
                 # Make activation
                 if activation is not None:
