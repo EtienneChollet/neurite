@@ -47,7 +47,7 @@ class Norm(nn.Module):
 
     def __init__(
         self,
-        norm_type: Union[str, Type[nn.Module]],
+        norm_type: Union[str, Type[nn.Module], None],
         ndim: Optional[int] = None,
         num_features: Optional[int] = None,
         num_groups: Optional[int] = None,
@@ -69,6 +69,7 @@ class Norm(nn.Module):
             - 2 -> *Norm2d
             - 3 -> *Norm3d
             Required for 'batch' or 'instance' norms.
+
         num_features : int, optional
             Number of input features or channels. Required for 'batch', 'instance',
             'layer', and 'group' normals. For layer norm, this is the size of the
@@ -184,10 +185,9 @@ class Activation(nn.Module):
     """
     Dynamically constructs an activation layer based on the specified type.
     """
-
     def __init__(
         self,
-        activation_type: str,
+        activation_type: Union[str, Type[nn.Module], None] = None,
         inplace: bool = True,
         negative_slope: float = 0.01,
         alpha: float = 1.0
@@ -209,8 +209,12 @@ class Activation(nn.Module):
             Alpha value for 'elu'. Default is 1.0.
         """
         super(Activation, self).__init__()
-        if isinstance(activation_type, torch.nn.Module):
+        if activation_type is None:
+            self.activation = None
+        elif isinstance(activation_type, torch.nn.Module):
             self.activation = activation_type
+        elif isinstance(activation_type, type) and issubclass(activation_type, nn.Module):
+            self.activation = activation_type()
         elif activation_type == "relu":
             self.activation = nn.ReLU(inplace=inplace)
         elif activation_type == "leaky_relu":
@@ -239,7 +243,10 @@ class Activation(nn.Module):
         torch.Tensor
             Activated output tensor.
         """
-        return self.activation(input_tensor)
+        if self.activation is None:
+            return nn.Identity()(input_tensor)
+        else:
+            return self.activation(input_tensor)
 
 
 class Conv(nn.Module):
@@ -484,6 +491,10 @@ class ConvBlock(nn.Sequential):
         torch.Size([1, 32, 64, 64])
         """
         self.order = order
+        # Tracker to determine the logic for the first convolution as opposed to later ones.
+        first_conv = True
+        num_features = in_channels
+
         if order is None:
             order = 'nca'
         # Break order into list of letters (operations)
@@ -505,7 +516,7 @@ class ConvBlock(nn.Sequential):
                 layers.append(
                     Conv(
                         ndim,
-                        in_channels,
+                        num_features,
                         out_channels,
                         kernel_size,
                         stride=stride,
@@ -515,10 +526,13 @@ class ConvBlock(nn.Sequential):
                         bias=bias
                     )
                 )
+            if first_conv:
+                first_conv = False
+                num_features = out_channels
 
             elif operation == 'n' and norm is not None:
                 # Make normalization
-                layers.append(Norm(norm, ndim, out_channels))
+                layers.append(Norm(norm, ndim, num_features))
 
             elif operation == 'a' and activation is not None:
                 # Make activation
