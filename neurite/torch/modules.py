@@ -6,7 +6,8 @@ __all__ = [
     "Norm",
     "Activation",
     "Conv",
-    "ConvBlock"
+    "ConvBlock",
+    "TransposedConv"
 ]
 
 from typing import Union, Type, Optional
@@ -540,3 +541,111 @@ class ConvBlock(nn.Sequential):
 
         # Create the Sequential container
         super(ConvBlock, self).__init__(*layers)
+
+
+class TransposedConv(nn.Module):
+    """
+    Dynamically constructs a transposed convolutional layer (ConvTranspose1d,
+    ConvTranspose2d, or ConvTranspose3d) based on the input dimensionality
+    `ndim`.
+
+    This module enables flexible definition of transposed convolutional layers
+    for 1D, 2D, or 3D data, by internally selecting the appropriate PyTorch
+    transposed convolution operation (`torch.nn.ConvTranspose1d`,
+    `torch.nn.ConvTranspose2d`, or `torch.nn.ConvTranspose3d`).
+    """
+
+    def __init__(
+        self,
+        ndim: int,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int = 4,
+        stride: int = 2,
+        padding: int = 1,
+        output_padding: int = 0,
+        dilation: int = 1,
+        groups: int = 1,
+        bias: bool = True,
+    ):
+        """
+        Initialize the `TransposedConv` module.
+
+        Parameters
+        ----------
+        ndim : int
+            Dimensionality of the convolution (1 for Conv1d, 2 for Conv2d, 3 for Conv3d).
+            - 1: Uses `torch.nn.ConvTranspose1d` and expects input tensors of shape `(N, C, L)`,
+            where `N` is the batch size, `C` is the number of input channels, and `L` is the length
+            of the input sequence.
+
+            - 2: Uses `torch.nn.ConvTranspose2d` and expects input tensors of shape `(N, C, H, W)`,
+            where `H` and `W` are the spatial dimensions of the input image or feature map.
+
+            - 3: Uses `torch.nn.ConvTranspose3d` and expects input tensors of shape
+            `(N, C, D, H, W)`, where `D`, `H`, and `W` are the spatial dimensions of the input
+            image or feature map.
+
+        in_channels : int
+            Number of input channels.
+        out_channels : int
+            Number of output channels.
+        kernel_size : int or tuple
+            Size of the convolving kernel.
+        stride : int or tuple, optional
+            Stride of the convolution. Default is 2.
+        padding : int or tuple, optional
+            Padding added to all sides of the input. Default is 1.
+        output_padding : int or tuple, optional
+            Additional size added to one side of each dimension in the output
+            shape. Default is 0.
+        dilation : int or tuple, optional
+            Spacing between kernel elements. Default is 1.
+        groups : int, optional
+            Number of blocked connections from input to output channels.
+            Default is 1.
+        bias : bool, optional
+            If True, a learnable bias is added to the output. Default is True.
+        """
+        super(TransposedConv, self).__init__()
+
+        # Mapping of spatial dimensions for convolutions
+        conv_dim_map = {1: '1d', 2: '2d', 3: '3d'}
+
+        # Determine if `ndim` is valid
+        if ndim not in conv_dim_map:
+            # This only supports 1, 2, and 3 dimensions!
+            raise ValueError(f"Unsupported ndim={ndim}. Must be 1, 2, or 3.")
+
+        # Dynamically retreive nn.convXd
+        conv_cls_name = f"ConvTranspose{conv_dim_map[ndim]}"
+        conv_cls = getattr(nn, conv_cls_name)
+
+        # Construct the transposed convolution
+        self.conv = conv_cls(
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride=stride,
+            padding=padding,
+            output_padding=output_padding,
+            dilation=dilation,
+            groups=groups,
+            bias=bias,
+        )
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass of the transposed convolutional layer.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            Input tensor.
+
+        Returns
+        -------
+        torch.Tensor
+            Output tensor after transposed convolution.
+        """
+        return self.conv(input_tensor)
