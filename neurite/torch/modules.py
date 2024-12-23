@@ -7,6 +7,7 @@ __all__ = [
     "ConvBlock"
 ]
 
+from typing import Union
 import torch
 from torch import nn
 from .layers import Norm, Activation
@@ -73,25 +74,21 @@ class Conv(nn.Module):
             If True, a learnable bias is added to the output. Default is True.
         """
         super(Conv, self).__init__()
-        # Need the base name of the conv to append the ending (making it a complete attribute)
-        base_attr_name = 'Conv'
 
-        # Init the dictionary of different spatial dimensions
-        conv_attr_suffix_dict = {1: '1d', 2: '2d', 3: '3d'}
+        # Mapping of spatial dimensions for convolutions
+        conv_dim_map = {1: '1d', 2: '2d', 3: '3d'}
 
-        # Identify the appropriate suffix based on the specified `ndim`
-        if ndim not in conv_attr_suffix_dict:
+        # Determine if `ndim` is valid
+        if ndim not in conv_dim_map:
             # This only supports 1, 2, and 3 dimensions!
             raise ValueError(f"Unsupported ndim={ndim}. Must be 1, 2, or 3.")
 
-        # Complete the name of the convolution attribute so we can now import
-        conv_attr_name = base_attr_name + conv_attr_suffix_dict[ndim]
+        # Dynamically retreive nn.convXd
+        conv_cls_name = f"Conv{conv_dim_map[ndim]}"
+        conv_cls = getattr(nn, conv_cls_name)
 
-        # Import the convolution class with appropriate number of spatial dimensions
-        self.conv = getattr(nn, conv_attr_name)
-
-        # Init the conv class with necessary input arguments
-        self.conv = self.conv(
+        # Init the dynamically retreived conv class with necessary input arguments
+        self.conv = conv_cls(
             in_channels,
             out_channels,
             kernel_size,
@@ -143,13 +140,13 @@ class ConvBlock(nn.Sequential):
     --------
     >>> import torch.nn as nn
     >>> conv_block = ConvBlock(
-    ...     in_channels=64,
-    ...     out_channels=128,
-    ...     kernel_size=3,
-    ...     stride=1,
-    ...     padding=1,
-    ...     activation=nn.ReLU()
-    ... )
+            in_channels=64,
+            out_channels=128,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            activation=nn.ReLU()
+        )
     >>> input_tensor = torch.randn(16, 64, 32, 32)
     >>> output = conv_block(input_tensor)
     >>> print(output.shape)
@@ -167,8 +164,8 @@ class ConvBlock(nn.Sequential):
         dilation: int = 1,
         groups: int = 1,
         bias: bool = True,
-        norm: nn.Module = None,
-        activation: nn.Module = None,
+        norm: Union[str, nn.Module, None] = None,
+        activation: Union[str, nn.Module, None] = None,
         order: str = 'nca'
     ):
         """
@@ -226,7 +223,6 @@ class ConvBlock(nn.Sequential):
                 norm="batch",
                 activation="relu"
             )
-
         >>> input_tensor = torch.randn(1, 16, 64, 64)
         >>> output_tensor = conv_block(input_tensor)
         >>> print(output_tensor.shape)
@@ -258,10 +254,9 @@ class ConvBlock(nn.Sequential):
         >>> print(output_tensor.shape)
         torch.Size([1, 32, 64, 64])
         """
-        super().__init__()
         self.order = order
         if order is None:
-            order = ['cna']
+            order = 'nca'
         # Break order into list of letters (operations)
         self.order = list(order)
 
@@ -274,26 +269,31 @@ class ConvBlock(nn.Sequential):
 
         # Init layers container
         layers = []
+        # Collect layers in the appropriate order
         for operation in self.order:
             if operation == 'c':
                 # Make convolution
-                conv = Conv(
-                    ndim, in_channels, out_channels, kernel_size, stride=stride,
-                    padding=padding, dilation=dilation, groups=groups, bias=bias
+                layers.append(
+                    Conv(
+                        ndim,
+                        in_channels,
+                        out_channels,
+                        kernel_size,
+                        stride=stride,
+                        padding=padding,
+                        dilation=dilation,
+                        groups=groups,
+                        bias=bias
+                    )
                 )
-                layers.append(conv)
 
-            elif operation == 'n':
+            elif operation == 'n' and norm is not None:
                 # Make normalization
-                if norm is not None:
-                    norm_layer = Norm(norm, ndim, out_channels)
-                    layers.append(norm_layer)
+                layers.append(Norm(norm, ndim, out_channels))
 
-            elif operation == 'a':
+            elif operation == 'a' and activation is not None:
                 # Make activation
-                if activation is not None:
-                    activation = Activation(activation)
-                    layers.append(activation)
+                layers.append(Activation(activation))
 
         # Create the Sequential container
         super(ConvBlock, self).__init__(*layers)
