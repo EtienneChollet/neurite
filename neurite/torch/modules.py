@@ -526,9 +526,9 @@ class ConvBlock(nn.Sequential):
                         bias=bias
                     )
                 )
-            if first_conv:
-                first_conv = False
-                num_features = out_channels
+                if first_conv:
+                    first_conv = False
+                    num_features = out_channels
 
             elif operation == 'n' and norm is not None:
                 # Make normalization
