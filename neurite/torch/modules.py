@@ -3,11 +3,13 @@ Modules are simple operations containing learnable parameters. The `modules` mod
 nD building blocks for neural networks.
 """
 __all__ = [
-    "Conv"
+    "Conv",
+    "ConvBlock"
 ]
 
 import torch
 from torch import nn
+from .layers import Norm, Activation
 
 
 class Conv(nn.Module):
@@ -114,3 +116,174 @@ class Conv(nn.Module):
             Convolved output tensor.
         """
         return self.conv(input_tensor)
+
+
+class ConvBlock(nn.Sequential):
+    """
+    Convolutional Block comprising a convolutional layer, and optionally, an activation function and
+    normalization.
+
+    The default sequence of operations in this block is:
+        1. **Convolution**: Applies a 2D convolution over the input.
+        2. **Normalization**: Normalizes the output of the convolution to stabilize and accelerate
+        training.
+        3. **Activation Function**: Introduces non-linearity to the model.
+
+    Attributes
+    ----------
+    conv : nn.Conv2d
+        The convolutional layer.
+    batch_norm : nn.BatchNorm2d
+        The batch normalization layer.
+    activation : nn.Module
+        The activation function.
+
+    Examples
+    --------
+    >>> import torch.nn as nn
+    >>> conv_block = ConvBlock(
+    ...     in_channels=64,
+    ...     out_channels=128,
+    ...     kernel_size=3,
+    ...     stride=1,
+    ...     padding=1,
+    ...     activation=nn.ReLU()
+    ... )
+    >>> input_tensor = torch.randn(16, 64, 32, 32)
+    >>> output = conv_block(input_tensor)
+    >>> print(output.shape)
+    torch.Size([16, 128, 32, 32])
+    """
+
+    def __init__(
+        self,
+        ndim: int,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int = 3,
+        stride: int = 1,
+        padding: int = 1,
+        dilation: int = 1,
+        groups: int = 1,
+        bias: bool = True,
+        norm: nn.Module = None,
+        activation: nn.Module = None,
+        order: str = 'nca'
+    ):
+        """
+        Initialize the `ConvBlock`.
+
+        Parameters
+        ----------
+        ndim : int
+            Dimensionality of the convolution (1 for Conv1d, 2 for Conv2d, 3 for Conv3d).
+        in_channels : int
+            Number of input channels.
+        out_channels : int
+            Number of output channels.
+        kernel_size : int or tuple, optional
+            Size of the convolving kernel. Default is 3.
+        stride : int or tuple, optional
+            Stride of the convolution. Default is 1.
+        padding : int or tuple, optional
+            Padding added to all sides of the input. Default is 1.
+        dilation : int or tuple, optional
+            Spacing between kernel elements. Default is 1.
+        groups : int, optional
+            Number of blocked connections from input to output channels. Default is 1.
+        bias : bool, optional
+            If True, a learnable bias is added to the output. Default is True.
+        norm : str, nn.Module, or None, optional
+            Defines the normalization layer. Can be one of:
+            - A string: Supported options are 'batch', 'instance', 'layer', or 'group'.
+            - A `Norm` module: Instantiated or uninstantiated `Norm` layer.
+                e.g. nn.InstanceNorm3d(16) or nn.InstanceNorm3d
+            - `None`: No normalization is applied. Default is `None`.
+
+        activation : str, nn.Module, or None, optional
+            Defines the activation layer. Can be one of:
+            - A string: Supported options are 'relu', 'leaky_relu', or 'elu'.
+            - A `nn.Module`: Instantiated or uninstantiated activation module.
+                e.g. nn.Sigmoid(), nn.Sigmoid
+            - `None`: No activation is applied. Default is `None`.
+
+        order : str, optional
+            The order of operations in the block. Default is 'nca'
+            (normalization -> convolution -> activation).
+            Each character in the string represents one of the following:
+            - `'c'`: Convolution
+            - `'n'`: Normalization
+            - `'a'`: Activation
+
+        Examples
+        --------
+        ### Basic usage with default options:
+        >>> conv_block = ConvBlock(
+                ndim=2,
+                in_channels=16,
+                out_channels=32,
+                norm="batch",
+                activation="relu"
+            )
+
+        >>> input_tensor = torch.randn(1, 16, 64, 64)
+        >>> output_tensor = conv_block(input_tensor)
+        >>> print(output_tensor.shape)
+        torch.Size([1, 32, 64, 64])
+
+        ### Using a pre-instantiated `Norm` and `Activation` module:
+        >>> norm_layer = nn.BatchNorm2d(32)
+        >>> activation_layer = nn.ReLU()
+        >>> conv_block = ConvBlock(
+                ndim=2,
+                in_channels=16,
+                out_channels=32,
+                norm=norm_layer,
+                activation=activation_layer
+            )
+        >>> output_tensor = conv_block(input_tensor)
+        >>> print(output_tensor.shape)
+        torch.Size([1, 32, 64, 64])
+
+        ### Omitting normalization or activation:
+        >>> conv_block = ConvBlock(ndim=2, in_channels=16, out_channels=32, norm=None, activation=None)
+        >>> output_tensor = conv_block(input_tensor)
+        >>> print(output_tensor.shape)
+        torch.Size([1, 32, 64, 64])
+        """
+        self.order = order
+        if order is None:
+            order = ['cna']
+        # Break order into list of letters (operations)
+        self.order = list(order)
+
+        # Validate the operations
+        valid_operations = ['c', 'n', 'a']
+        if not set(order).issubset(valid_operations):
+            raise ValueError(
+                f"Invalid order. Must be a subset of {valid_operations}."
+            )
+
+        # Init layers container
+        layers = []
+        for operation in self.order:
+            if operation == 'c':
+                # Make convolution
+                conv = Conv(
+                    ndim, in_channels, out_channels, kernel_size, stride=stride,
+                    padding=padding, dilation=dilation, groups=groups, bias=bias
+                )
+                layers.append(conv)
+            elif operation == 'n':
+                # Make normalization
+                if norm is not None:
+                    norm_layer = Norm(norm, ndim, out_channels)
+                    layers.append(norm_layer)
+            elif operation == 'a':
+                # Make activation
+                if activation is not None:
+                    activation = Activation(activation)
+                    layers.append(activation)
+
+        # Create the Sequential container
+        super(ConvBlock, self).__init__(*layers)
