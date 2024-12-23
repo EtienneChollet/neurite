@@ -41,6 +41,7 @@ __all__ = [
     "SampleImageFromLabels",
     "DrawImage",
     "Norm",
+    "Activation",
     "LocalParamLayer",
     "LocalParamWithInput",
     "MeanStream",
@@ -1458,6 +1459,68 @@ class Norm(nn.Module):
             Normalized output tensor.
         """
         return self.norm(input_tensor)
+
+
+class Activation(nn.Module):
+    """
+    Dynamically constructs an activation layer based on the specified type.
+    """
+
+    def __init__(
+        self,
+        activation_type: str,
+        inplace: bool = True,
+        negative_slope: float = 0.01,
+        alpha: float = 1.0
+    ):
+        """
+        Initialize the `Activation` module.
+
+        Parameters
+        ----------
+        activation_type : str
+            Type of activation function. Supported values: 'relu',
+            'leaky_relu',
+            'elu'.
+        inplace : bool, optional
+            Whether to perform the operation in-place. Default is True.
+        negative_slope : float, optional
+            Negative slope for 'leaky_relu'. Default is 0.01.
+        alpha : float, optional
+            Alpha value for 'elu'. Default is 1.0.
+        """
+        super(Activation, self).__init__()
+        if isinstance(activation_type, torch.nn.Module):
+            self.activation = activation_type
+        elif activation_type == "relu":
+            self.activation = nn.ReLU(inplace=inplace)
+        elif activation_type == "leaky_relu":
+            self.activation = nn.LeakyReLU(
+                negative_slope=negative_slope, inplace=inplace
+            )
+        elif activation_type == "elu":
+            self.activation = nn.ELU(alpha=alpha, inplace=inplace)
+        else:
+            raise ValueError(
+                f"Unsupported activation_type '{activation_type}'. "
+                f"Supported types: 'relu', 'leaky_relu', 'elu'."
+            )
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for the activation layer.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            Input tensor.
+
+        Returns
+        -------
+        torch.Tensor
+            Activated output tensor.
+        """
+        return self.activation(input_tensor)
 
 
 #########################################################
