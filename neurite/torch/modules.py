@@ -796,3 +796,94 @@ class EncoderBlock(nn.Module):
             Downsampled tensor after applying convolution and pooling.
         """
         return self.pool(self.conv_block(input_tensor))
+
+
+class DecoderBlock(nn.Module):
+    """
+    Decoder block consisting of a transposed convolution followed by a convolutional block.
+
+    Attributes
+    ----------
+    upsample : TransposedConv
+        The transposed convolutional layer to upsample the feature maps.
+    conv_block : ConvBlock
+        The convolutional block applying a series of convolutions, normalization, and activation.
+    """
+
+    def __init__(
+        self,
+        ndim: int,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int = 3,
+        stride: int = 1,
+        padding: int = 1,
+        upsample_kernel_size: int = 4,
+        upsample_stride: int = 2,
+        upsample_padding: int = 1,
+        norm: Union[str, nn.Module, None] = "batch",
+        activation: Union[str, nn.Module, None] = "relu",
+    ):
+        """
+        Initialize the `DecoderBlock`.
+
+        Parameters
+        ----------
+        ndim : int
+            Dimensionality of the convolution (1 for Conv1d, 2 for Conv2d, 3 for Conv3d).
+        in_channels : int
+            Number of input channels.
+        out_channels : int
+            Number of output channels.
+        kernel_size : int, optional
+            Size of the convolving kernel. Default is 3.
+        stride : int, optional
+            Stride of the convolution. Default is 1.
+        padding : int, optional
+            Padding added to all sides of the input. Default is 1.
+        upsample_kernel_size : int, optional
+            Kernel size for the transposed convolution. Default is 4.
+        upsample_stride : int, optional
+            Stride for the transposed convolution. Default is 2.
+        upsample_padding : int, optional
+            Padding for the transposed convolution. Default is 1.
+        norm : str, nn.Module, or None, optional
+            Normalization type. Default is 'batch'.
+        activation : str, nn.Module, or None, optional
+            Activation type. Default is 'relu'.
+        """
+        super().__init__()
+        self.upsample = TransposedConv(
+            ndim=ndim,
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=upsample_kernel_size,
+            stride=upsample_stride,
+            padding=upsample_padding,
+        )
+        self.conv_block = ConvBlock(
+            ndim=ndim,
+            in_channels=out_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            norm=norm,
+            activation=activation,
+        )
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass of the decoder block.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            Input tensor.
+
+        Returns
+        -------
+        torch.Tensor
+            Upsampled tensor after applying transposed convolution and further convolutions.
+        """
+        return self.conv_block(self.upsample(input_tensor))
