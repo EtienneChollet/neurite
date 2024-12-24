@@ -7,7 +7,9 @@ __all__ = [
     "Activation",
     "Conv",
     "ConvBlock",
-    "TransposedConv"
+    "TransposedConv",
+    "Pool",
+    "EncoderBlock",
 ]
 
 from typing import Union, Type, Optional
@@ -713,3 +715,84 @@ class Pool(nn.Module):
             The output tensor after applying the pooling operation.
         """
         return self.pool(input_tensor)
+
+
+class EncoderBlock(nn.Module):
+    """
+    Encoder block consisting of a convolutional block followed by a pooling layer.
+
+    Attributes
+    ----------
+    conv_block : ConvBlock
+        The convolutional block applying a series of convolutions, normalization, and activation.
+    pool : Pool
+        The pooling layer to downsample the feature maps.
+    """
+
+    def __init__(
+        self,
+        ndim: int,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int = 3,
+        stride: int = 1,
+        padding: int = 1,
+        norm: Union[str, nn.Module, None] = "batch",
+        activation: Union[str, nn.Module, None] = "relu",
+        pool_mode: str = "max",
+        pool_kernel_size: int = 2,
+    ):
+        """
+        Initialize the `EncoderBlock`.
+
+        Parameters
+        ----------
+        ndim : int
+            Dimensionality of the convolution (1 for Conv1d, 2 for Conv2d, 3 for Conv3d).
+        in_channels : int
+            Number of input channels.
+        out_channels : int
+            Number of output channels.
+        kernel_size : int, optional
+            Size of the convolving kernel. Default is 3.
+        stride : int, optional
+            Stride of the convolution. Default is 1.
+        padding : int, optional
+            Padding added to all sides of the input. Default is 1.
+        norm : str, nn.Module, or None, optional
+            Normalization type. Default is 'batch'.
+        activation : str, nn.Module, or None, optional
+            Activation type. Default is 'relu'.
+        pool_mode : str, optional
+            Pooling mode ('max' or 'avg'). Default is 'max'.
+        pool_kernel_size : int, optional
+            Kernel size for pooling. Default is 2.
+        """
+        super().__init__()
+        self.conv_block = ConvBlock(
+            ndim=ndim,
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            norm=norm,
+            activation=activation,
+        )
+        self.pool = Pool(ndim=ndim, pool_mode=pool_mode, kernel_size=pool_kernel_size)
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass of the encoder block.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            Input tensor.
+
+        Returns
+        -------
+        torch.Tensor
+            Downsampled tensor after applying convolution and pooling.
+        """
+        return self.pool(self.conv_block(input_tensor))
