@@ -10,6 +10,7 @@ __all__ = [
     "TransposedConv",
     "Pool",
     "EncoderBlock",
+    "DecoderBlock"
 ]
 
 from typing import Union, Type, Optional
@@ -737,7 +738,7 @@ class EncoderBlock(nn.Module):
         kernel_size: int = 3,
         stride: int = 1,
         padding: int = 1,
-        norm: Union[str, nn.Module, None] = "batch",
+        norm: Union[str, nn.Module, None] = None,
         activation: Union[str, nn.Module, None] = "relu",
         pool_mode: str = "max",
         pool_kernel_size: int = 2,
@@ -821,7 +822,7 @@ class DecoderBlock(nn.Module):
         upsample_kernel_size: int = 4,
         upsample_stride: int = 2,
         upsample_padding: int = 1,
-        norm: Union[str, nn.Module, None] = "batch",
+        norm: Union[str, nn.Module, None] = None,
         activation: Union[str, nn.Module, None] = "relu",
     ):
         """
