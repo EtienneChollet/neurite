@@ -649,3 +649,67 @@ class TransposedConv(nn.Module):
             Output tensor after transposed convolution.
         """
         return self.conv(input_tensor)
+
+
+class Pool(nn.Module):
+    """
+    A pooling layer that dynamically constructs a pooling operation based
+    on the dimensionality and pooling mode specified.
+
+    Attributes
+    ----------
+    pool : nn.Module
+        The pooling operation to apply. It is one of `MaxPool`, `AvgPool`, 
+        or `LPPool` for 1D, 2D, or 3D inputs.
+    """
+
+    def __init__(self, ndim: int, pool_mode: str = 'max', kernel_size=2):
+        """
+        Initialize the `Pool` module.
+
+        Parameters
+        ----------
+        ndim : int
+            The dimensionality of the pooling operation. Must be 1, 2, or 3.
+        pool_mode : str, optional
+            The pooling mode to use. Options are 'max' for max pooling, 
+            'avg' for average pooling, and 'lp' for LP pooling. Default is
+            'max'.
+        kernel_size : int or tuple, optional
+            The size of the pooling kernel. Default is 2.
+        """
+        super(Pool, self).__init__()
+
+        # Mapping of pooling operations
+        pool_map = {
+            'max': 'MaxPool', 'avg': 'AvgPool', 'lp': 'LPPool'
+            }
+
+        # Determine if pooling operation is supported
+        if pool_mode not in pool_map:
+            raise ValueError(f"Unsupported pool_mode={pool_mode}. Must be `max`, `avg`, or `lp`.")
+
+        # Mapping of spatial dimensions for pooling operation
+        pool_dim_map = {1: '1d', 2: '2d', 3: '3d'}
+        if ndim not in pool_dim_map:
+            raise ValueError(f"Unsupported ndim={ndim}. Must be 1, 2, or 3.")
+
+        pool_cls_name = f"{pool_map[pool_mode]}{pool_dim_map[ndim]}"
+        pool_cls = getattr(nn, pool_cls_name)
+        self.pool = pool_cls(kernel_size=kernel_size)
+
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Apply the pooling operation to the input tensor.
+
+        Parameters
+        ----------
+        input_tensor : torch.Tensor
+            The input tensor to be pooled.
+
+        Returns
+        -------
+        torch.Tensor
+            The output tensor after applying the pooling operation.
+        """
+        return self.pool(input_tensor)
