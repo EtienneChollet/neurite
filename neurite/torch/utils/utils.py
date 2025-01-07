@@ -918,9 +918,9 @@ def make_encoders(
         Stride of the convolution. Default is 1.
     padding : int, optional
         Padding added to all sides of the input. Default is 1.
-    norms : List[str]
+    norms : list, str, nn.Module, or None, optional
         Normalization layers for each encoder block.
-    activations : List[callable]
+    activations : list, str, nn.Module, or None, optional
         Activation functions for each encoder block.
     pool_mode : str, optional
         Pooling mode ('max' or 'avg'). Default is 'max'.
@@ -930,7 +930,7 @@ def make_encoders(
     Returns
     -------
     nn.ModuleList
-        A PyTorch ModuleList containing the encoder blocks.
+        A list containing the encoder blocks.
 
     Examples
     --------
