@@ -15,6 +15,10 @@ utils
 modules
     Foundational, trainable layers for constructing neural networks, including normalization
     layers and convolutional blocks.
+models
+    Prebuilt yet flexible neural network architectures designed for specific tasks, such as image
+    segmentation, registration, or classification. models leverage layers and modules from
+    other components of the neurite for streamlined object construction.
 """
 # Importing modules
 from . import layers
@@ -22,5 +26,6 @@ from . import losses
 from . import random
 from . import utils
 from . import modules
+from . import models
 
 from .utils import *
