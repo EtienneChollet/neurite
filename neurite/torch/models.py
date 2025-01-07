@@ -20,6 +20,14 @@ class FlexibleUNet(nn.Module):
 
     Attributes
     ----------
+    encoders : nn.ModuleList
+        Encoder layers.
+    bottleneck : nn.Module
+        Central bottleneck layer.
+    decoders : nn.ModuleList
+        Decoder layers.
+    out_layer : nn.Module
+        Final output layer.
 
     Notes
     -----
@@ -28,7 +36,15 @@ class FlexibleUNet(nn.Module):
 
     Examples
     --------
-
+    >>> model = FlexibleUNet(
+    ...     ndim=2, in_channels=1, out_channels=1,
+    ...     nb_features=[16, 32, 64],
+    ...     norms='instance', activations=nn.ReLU
+    ... )
+    >>> input_tensor = torch.randn(1, 1, 128, 128)
+    >>> output = model(input_tensor)
+    >>> output.shape
+    torch.Size([1, 1, 128, 128])
     """
 
     def __init__(
@@ -47,6 +63,24 @@ class FlexibleUNet(nn.Module):
 
         Parameters
         ----------
+        ndim : int
+            Dimensionality of the input (1, 2, or 3).
+        in_channels : int
+            Number of input channels.
+        out_channels : int
+            Number of output channels.
+        nb_features : List[int]
+            Number of features at each layer of the encoder. Must be a list of
+            positive integers.
+        norms : Union[List[str], str, None], optional
+            Normalization layers to use in each block. Can be a string or a list
+            of strings specifying norms for each layer, or `None` for no norm.
+        activations : Union[List[str], str, Callable], optional
+            Activation functions to use in each block. Can be a callable,
+            a string, or a list of strings/callables.
+        order : str, optional
+            Order of operations in each convolutional block (e.g., 'ncaca').
+
 
         Raises
         ------
