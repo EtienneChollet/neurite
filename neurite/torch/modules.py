@@ -426,7 +426,7 @@ class ConvBlock(nn.Sequential):
         padding : int or tuple, optional
             Padding added to all sides of the input. Default is 1.
         dilation : int or tuple, optional
-            Spacing between kernel elements. Default is 1.
+            Spacing between kernel elements. Every `dilation`-th element is used. Default is 1.
         groups : int, optional
             Number of blocked connections from input to output channels. Default is 1.
         bias : bool, optional
@@ -742,6 +742,7 @@ class EncoderBlock(nn.Module):
         activation: Union[str, nn.Module, None] = "relu",
         pool_mode: str = "max",
         pool_kernel_size: int = 2,
+        order='nca',
     ):
         """
         Initialize the `EncoderBlock`.
@@ -768,6 +769,13 @@ class EncoderBlock(nn.Module):
             Pooling mode ('max' or 'avg'). Default is 'max'.
         pool_kernel_size : int, optional
             Kernel size for pooling. Default is 2.
+        order : str, optional
+            The order of operations in the block. Default is 'nca' (normalization -> convolution ->
+            activation). Each character in the string can be specified an arbitrary number of times
+            in any order. Each character in the string represents one of the following:
+            - `'c'`: Convolution
+            - `'n'`: Normalization
+            - `'a'`: Activation
         """
         super().__init__()
         self.conv_block = ConvBlock(
@@ -779,6 +787,7 @@ class EncoderBlock(nn.Module):
             padding=padding,
             norm=norm,
             activation=activation,
+            order=order,
         )
         self.pool = Pool(ndim=ndim, pool_mode=pool_mode, kernel_size=pool_kernel_size)
 
@@ -824,6 +833,7 @@ class DecoderBlock(nn.Module):
         upsample_padding: int = 1,
         norm: Union[str, nn.Module, None] = None,
         activation: Union[str, nn.Module, None] = "relu",
+        order: str = 'nca'
     ):
         """
         Initialize the `DecoderBlock`.
@@ -852,6 +862,13 @@ class DecoderBlock(nn.Module):
             Normalization type. Default is 'batch'.
         activation : str, nn.Module, or None, optional
             Activation type. Default is 'relu'.
+        order : str, optional
+            The order of operations in the block. Default is 'nca' (normalization -> convolution ->
+            activation). Each character in the string can be specified an arbitrary number of times
+            in any order. Each character in the string represents one of the following:
+            - `'c'`: Convolution
+            - `'n'`: Normalization
+            - `'a'`: Activation
         """
         super().__init__()
         self.upsample = TransposedConv(
@@ -871,6 +888,7 @@ class DecoderBlock(nn.Module):
             padding=padding,
             norm=norm,
             activation=activation,
+            order=order
         )
 
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:

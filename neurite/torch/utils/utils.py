@@ -903,6 +903,7 @@ def make_encoders(
     activations: Union[str, nn.Module, None] = "relu",
     pool_mode: str = "max",
     pool_kernel_size: int = 2,
+    order: str = 'nca',
 ) -> nn.ModuleList:
     """
     Create an `nn.ModuleList` of encoder blocks based the number of features per layer.
@@ -927,6 +928,13 @@ def make_encoders(
         Pooling mode ('max' or 'avg'). Default is 'max'.
     pool_kernel_size : int, optional
         Kernel size for pooling. Default is 2.
+    order : str, optional
+        The order of operations in each encoder block. Default is 'nca' (normalization ->
+        convolution -> activation). Each character in the string can be specified an arbitrary
+        number of times in any order. Each character in the string represents one of the following:
+        - `'c'`: Convolution
+        - `'n'`: Normalization
+        - `'a'`: Activation
 
     Returns
     -------
@@ -970,6 +978,7 @@ def make_encoders(
             activation=activations[i],
             pool_mode=pool_mode,
             pool_kernel_size=pool_kernel_size,
+            order=order
         )
         encoders.append(encoder)
 
@@ -987,6 +996,7 @@ def make_decoders(
     upsample_padding: int = 1,
     norms: List[Union[str, nn.Module, None]] = None,
     activations: List[Union[str, nn.Module, None]] = None,
+    order: str = 'nca'
 ) -> nn.ModuleList:
     """
     Create an `nn.ModuleList` of decoder blocks based the number of features per layer/level.
@@ -1015,6 +1025,13 @@ def make_decoders(
     activations : list, str, nn.Module, or None, optional
         Activation functions for each encoder block at each level. If a list, must have the same
         length as nb_features.
+    order : str, optional
+        The order of operations in the block. Default is 'nca' (normalization -> convolution ->
+        activation). Each character in the string can be specified an arbitrary number of times
+        in any order. Each character in the string represents one of the following:
+        - `'c'`: Convolution
+        - `'n'`: Normalization
+        - `'a'`: Activation
 
     Returns
     -------
@@ -1062,7 +1079,8 @@ def make_decoders(
             upsample_stride=upsample_stride,
             upsample_padding=upsample_padding,
             norm=norms[-i],
-            activation=activations[-i]
+            activation=activations[-i],
+            order=order,
         )
         decoders.append(decoder)
 
