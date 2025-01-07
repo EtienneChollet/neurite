@@ -87,8 +87,14 @@ class FlexibleUNet(nn.Module):
 
         """
         super().__init__()
-        self.norms = norms
-        self.activations = activations
+        # Normalization layers
+        if not isinstance(norms, list):
+            self.norms = [norms] * len(nb_features)
+
+        # Activation layers
+        if not isinstance(activations, list):
+            self.activations = [activations] * len(nb_features)
+
         # Original sequence for encoder
         self.nb_features = [in_channels, *nb_features]
         # Inverted sequence for decoder
@@ -117,7 +123,10 @@ class FlexibleUNet(nn.Module):
             nb_features=self.reversed_features,
             norms=self.norms,
             activations=self.activations,
-            order=order
+            order=order,
+            upsample_kernel_size=2,
+            upsample_stride=2,
+            upsample_padding=0,
         )
 
         # Final convolution
@@ -147,8 +156,8 @@ class FlexibleUNet(nn.Module):
         # Encoder path
         skip_connections = []
         for encoder in self.encoders:
-            feature_tensor = encoder(feature_tensor)
-            skip_connections.append(feature_tensor)  # Save for skip connection
+            feature_tensor, residual = encoder(feature_tensor, return_residual=True)
+            skip_connections.append(residual)  # Save for skip connection
 
         # Bottleneck
         feature_tensor = self.bottleneck(feature_tensor)
@@ -156,9 +165,7 @@ class FlexibleUNet(nn.Module):
         # Decoder path
         for i, decoder in enumerate(self.decoders):
             skip = skip_connections[-(i + 1)]
-            # Concat along channel dimension
-            feature_tensor = torch.cat((feature_tensor, skip), dim=1)
-            feature_tensor = decoder(feature_tensor)
+            feature_tensor = decoder(feature_tensor, skip)
 
         # Output layer
         feature_tensor = self.out_layer(feature_tensor)

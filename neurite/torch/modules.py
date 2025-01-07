@@ -791,7 +791,7 @@ class EncoderBlock(nn.Module):
         )
         self.pool = Pool(ndim=ndim, pool_mode=pool_mode, kernel_size=pool_kernel_size)
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+    def forward(self, input_tensor: torch.Tensor, return_residual: bool = False) -> torch.Tensor:
         """
         Forward pass of the encoder block.
 
@@ -805,7 +805,11 @@ class EncoderBlock(nn.Module):
         torch.Tensor
             Downsampled tensor after applying convolution and pooling.
         """
-        return self.pool(self.conv_block(input_tensor))
+        if return_residual:
+            conv_resultant = self.conv_block(input_tensor)
+            return self.pool(conv_resultant), conv_resultant
+        else:
+            return self.pool(self.conv_block(input_tensor))
 
 
 class DecoderBlock(nn.Module):
@@ -874,14 +878,14 @@ class DecoderBlock(nn.Module):
         self.upsample = TransposedConv(
             ndim=ndim,
             in_channels=in_channels,
-            out_channels=out_channels,
+            out_channels=in_channels,
             kernel_size=upsample_kernel_size,
             stride=upsample_stride,
             padding=upsample_padding,
         )
         self.conv_block = ConvBlock(
             ndim=ndim,
-            in_channels=out_channels,
+            in_channels=in_channels + in_channels,
             out_channels=out_channels,
             kernel_size=kernel_size,
             stride=stride,
@@ -891,7 +895,7 @@ class DecoderBlock(nn.Module):
             order=order
         )
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+    def forward(self, input_tensor: torch.Tensor, residual: torch.Tensor = None) -> torch.Tensor:
         """
         Forward pass of the decoder block.
 
@@ -905,4 +909,9 @@ class DecoderBlock(nn.Module):
         torch.Tensor
             Upsampled tensor after applying transposed convolution and further convolutions.
         """
-        return self.conv_block(self.upsample(input_tensor))
+        if isinstance(residual, torch.Tensor):
+            features = self.upsample(input_tensor)
+            features = torch.cat([features, residual], dim=1)
+            return self.conv_block(features)
+        else:
+            return self.conv_block(self.upsample(input_tensor))

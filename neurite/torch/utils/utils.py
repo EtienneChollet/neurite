@@ -1067,10 +1067,13 @@ def make_decoders(
     decoders = nn.ModuleList()
 
     # Make decoder and append to list of encoders
+    nb_features = [*nb_features, nb_features[-1]]
+    # number = len(nb_features)
     for i in range(len(nb_features) - 1):
+
         decoder = modules.DecoderBlock(
             ndim=ndim,
-            in_channels=nb_features[i] * 2,
+            in_channels=nb_features[i],  # + nb_features[i+1],
             out_channels=nb_features[i + 1],
             kernel_size=kernel_size,
             stride=stride,
