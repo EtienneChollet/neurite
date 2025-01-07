@@ -37,7 +37,8 @@ __all__ = [
     "random_clear_label",
     "sample_image_from_labels",
     "is_instantiated_normalization",
-    "make_encoders"
+    "make_encoders",
+    "make_decoders"
 ]
 
 from typing import Union, List
@@ -973,3 +974,96 @@ def make_encoders(
         encoders.append(encoder)
 
     return encoders
+
+
+def make_decoders(
+    ndim: int,
+    nb_features: List[int],
+    kernel_size: int = 3,
+    stride: int = 1,
+    padding: int = 1,
+    upsample_kernel_size: int = 4,
+    upsample_stride: int = 2,
+    upsample_padding: int = 1,
+    norms: List[Union[str, nn.Module, None]] = None,
+    activations: List[Union[str, nn.Module, None]] = None,
+) -> nn.ModuleList:
+    """
+    Create an `nn.ModuleList` of decoder blocks based the number of features per layer/level.
+
+    Parameters
+    ----------
+    ndim : int
+        Dimensionality of the convolution (1 for Conv1d, 2 for Conv2d, 3 for Conv3d).
+    nb_features : List[int]
+        Number of features at each level in the decoder.
+    kernel_size : int, optional
+        Size of the convolving kernel at each level. Default is 3.
+    stride : int, optional
+        Stride of the convolution at each level. Default is 1.
+    padding : int, optional
+        Padding added to all sides of the input at each level. Default is 1.
+    upsample_kernel_size : int, optional
+        Kernel size for the transposed convolution at each level. Default is 4.
+    upsample_stride : int, optional
+        Stride for the transposed convolution at each level. Default is 2.
+    upsample_padding : int, optional
+        Padding for the transposed convolution at each level. Default is 1.
+    norms : list, str, nn.Module, or None, optional
+        Normalization layers for each encoder block at each level. If a list, must have the same
+        length as nb_features.
+    activations : list, str, nn.Module, or None, optional
+        Activation functions for each encoder block at each level. If a list, must have the same
+        length as nb_features.
+
+    Returns
+    -------
+    nn.ModuleList
+        A list containing the decoder blocks.
+
+    Notes
+    -----
+    - If `norms` or `activations` are a list, they must be the same length as the nb_features.
+
+    Examples
+    --------
+    >>> decoders = make_decoders(
+    ...     ndim=2,
+    ...     nb_features=[32, 16, 4],
+    ...     upsample_kernel_size=4,
+    ...     norms=["batch", "instance", "batch"],
+    ...     activations="relu"
+    ... )
+    >>> print(decoders)
+    ModuleList(...)
+    """
+
+    # Normalization layers
+    if not isinstance(norms, list):
+        norms = [norms] * len(nb_features)
+
+    # Activation layers
+    if not isinstance(activations, list):
+        activations = [activations] * len(nb_features)
+
+    # Init decoders container
+    decoders = nn.ModuleList()
+
+    # Make decoder and append to list of encoders
+    for i in range(len(nb_features) - 1):
+        decoder = modules.DecoderBlock(
+            ndim=ndim,
+            in_channels=nb_features[i] * 2,
+            out_channels=nb_features[i + 1],
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            upsample_kernel_size=upsample_kernel_size,
+            upsample_stride=upsample_stride,
+            upsample_padding=upsample_padding,
+            norm=norms[-i],
+            activation=activations[-i]
+        )
+        decoders.append(decoder)
+
+    return decoders
