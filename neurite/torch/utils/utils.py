@@ -36,14 +36,17 @@ __all__ = [
     'make_range',
     'random_clear_label',
     'sample_image_from_labels',
-    'is_instantiated_normalization'
+    'is_instantiated_normalization',
+    'make_encoders'
 ]
 
-from typing import Union
+from typing import Union, List
 import inspect
 import torch
 import torch.nn.functional as F
+from torch import nn
 from neurite.torch.random import Fixed, RandInt, Sampler, Normal, Uniform
+from neurite.torch import modules
 
 
 def identity(input_argument):
@@ -887,3 +890,86 @@ def is_instantiated_normalization(obj: object) -> bool:
         if issubclass(cls, torch.nn.Module)
     )
     return isinstance(obj, normalization_classes)
+
+
+def make_encoders(
+    ndim: int,
+    nb_features: List[int],
+    kernel_size: int = 3,
+    stride: int = 1,
+    padding: int = 1,
+    norms: Union[str, nn.Module, None] = None,
+    activations: Union[str, nn.Module, None] = "relu",
+    pool_mode: str = "max",
+    pool_kernel_size: int = 2,
+) -> nn.ModuleList:
+    """
+    Create an `nn.ModuleList` of encoder blocks based the number of features per layer.
+
+    Parameters
+    ----------
+    ndim : int
+        Dimensionality of the convolution (1 for Conv1d, 2 for Conv2d, 3 for Conv3d).
+    nb_features : List[int]
+        Number of features at each level in the encoder.
+    kernel_size : int, optional
+        Size of the convolving kernel at each level. Default is 3.
+    stride : int, optional
+        Stride of the convolution. Default is 1.
+    padding : int, optional
+        Padding added to all sides of the input. Default is 1.
+    norms : List[str]
+        Normalization layers for each encoder block.
+    activations : List[callable]
+        Activation functions for each encoder block.
+    pool_mode : str, optional
+        Pooling mode ('max' or 'avg'). Default is 'max'.
+    pool_kernel_size : int, optional
+        Kernel size for pooling. Default is 2.
+
+    Returns
+    -------
+    nn.ModuleList
+        A PyTorch ModuleList containing the encoder blocks.
+
+    Examples
+    --------
+    >>> encoders = make_encoders(
+    ...     ndim=2,
+    ...     nb_features=[3, 16, 32],
+    ...     kernel_size=3,
+    ...     norms=["batch", "instance", "batch"],
+    ...     activations="relu"
+    ... )
+    >>> print(encoders)
+    ModuleList(...)
+    """
+
+    # Normalization layers
+    if not isinstance(norms, list):
+        norms = [norms] * len(nb_features)
+
+    # Activation layers
+    if not isinstance(activations, list):
+        activations = [activations] * len(nb_features)
+
+    # Init encoders container
+    encoders = nn.ModuleList()
+
+    # Make encoder and append to list of encoders
+    for i in range(len(nb_features) - 1):
+        encoder = modules.EncoderBlock(
+            ndim=ndim,
+            in_channels=nb_features[i],
+            out_channels=nb_features[i + 1],
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            norm=norms[i],
+            activation=activations[i],
+            pool_mode=pool_mode,
+            pool_kernel_size=pool_kernel_size,
+        )
+        encoders.append(encoder)
+
+    return encoders
