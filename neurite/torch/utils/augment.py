@@ -26,9 +26,9 @@ implied. See the License for the specific language governing permissions and lim
 the License.
 """
 __all__ = [
-    'random_crop',
-    'random_clip',
-    'random_gamma'
+    "random_crop",
+    "random_clip",
+    "random_gamma"
 ]
 
 from typing import Union, Tuple, List

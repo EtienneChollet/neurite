@@ -2,16 +2,16 @@
 Random (samplers) for the neurite project.
 """
 __all__ = [
-    'register_init_arguments',
-    'ensure_list',
-    'Sampler',
-    'Uniform',
-    'Fixed',
-    'Normal',
-    'Bernoulli',
-    'Poisson',
-    'LogNormal',
-    'RandInt',
+    "register_init_arguments",
+    "ensure_list",
+    "Sampler",
+    "Uniform",
+    "Fixed",
+    "Normal",
+    "Bernoulli",
+    "Poisson",
+    "LogNormal",
+    "RandInt",
 ]
 
 import inspect

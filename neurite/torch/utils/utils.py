@@ -23,21 +23,21 @@ implied. See the License for the specific language governing permissions and lim
 the License.
 """
 __all__ = [
-    'identity',
-    'soft_quantize',
-    'mse_loss',
-    'create_gaussian_kernel',
-    'gaussian_smoothing',
-    'bernoulli',
-    'apply_bernoulli_mask',
-    'subsample_tensor',
-    'subsample_tensor_random_dims',
-    'upsample_tensor',
-    'make_range',
-    'random_clear_label',
-    'sample_image_from_labels',
-    'is_instantiated_normalization',
-    'make_encoders'
+    "identity",
+    "soft_quantize",
+    "mse_loss",
+    "create_gaussian_kernel",
+    "gaussian_smoothing",
+    "bernoulli",
+    "apply_bernoulli_mask",
+    "subsample_tensor",
+    "subsample_tensor_random_dims",
+    "upsample_tensor",
+    "make_range",
+    "random_clear_label",
+    "sample_image_from_labels",
+    "is_instantiated_normalization",
+    "make_encoders"
 ]
 
 from typing import Union, List
