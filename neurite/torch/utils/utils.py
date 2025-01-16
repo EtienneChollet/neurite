@@ -140,6 +140,7 @@ def soft_quantize(
     # Optionally convert to log domain
     if return_log:
         softly_quantized.log_()
+
     return softly_quantized
 
 
@@ -171,6 +172,7 @@ def mse_loss(input_tensor: torch.Tensor, target_tensor: torch.Tensor) -> torch.T
     # Print loss (should be approximately 2.0)
     >>> print(loss)
     """
+
     return torch.mean((input_tensor - target_tensor) ** 2)
 
 
@@ -216,8 +218,10 @@ def create_gaussian_kernel(
 
     # Calculate the Gaussian function
     kernel = torch.exp(-((grid ** 2).sum(-1) / (2 * sigma ** 2)))
+
     # Normalize the kernel so that the sum of all elements is 1
     kernel = kernel / kernel.sum()
+
     # Reshape to 5D tensor for conv3d
     kernel = kernel.view(1, 1, *([kernel_size] * ndim))
 
@@ -262,6 +266,7 @@ def gaussian_smoothing(
     # Sampling parameters
     kernel_size = Fixed.make(kernel_size)()
     sigma = Fixed.make(sigma)()
+
     # Infer dimensionality in voxel/pixel space. Squeeze to remove batch and/or channel dims.
     ndim = input_tensor.dim() - 2
 

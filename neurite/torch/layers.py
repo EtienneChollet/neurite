@@ -63,6 +63,7 @@ def register_init_arguments(func: Callable) -> Callable:
     Decorator to register a function's (typically __init__) arguments into the instance's
     `arguments` dictionary and set them as individual attributes.
     """
+
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         # Call the original __init__ method
@@ -85,6 +86,7 @@ def register_init_arguments(func: Callable) -> Callable:
         # Unpack 'theta' if present
         if 'theta' in params:
             theta = params.pop('theta')
+
             for key, value in theta.items():
                 # If the value is a Sampler instance, store its arguments recursively
                 if isinstance(value, Sampler):
@@ -99,6 +101,7 @@ def register_init_arguments(func: Callable) -> Callable:
             setattr(self, key, value)  # Set as attribute
 
         return result
+
     return wrapper
 
 
@@ -173,16 +176,21 @@ class BaseTransform(nn.Module):
                reconstructing the object.
             - `arguments` (dict): The arbitrary parameters (`theta`) passed during initialization.
         """
+
         state_dict = {
             # The qualified name of the class (for reconstruction purposes)
             'qualname': self.__class__.__name__,
+
             # Parent class, for more broad taxonomy/snapshot view
             'parent': type(self).__bases__[0].__name__,
+
             # The module that the sample may be found in (and reconstructed from)
             'module': self.__module__,
+
             # The sampler's parameters
             'arguments': self.arguments,
         }
+
         return state_dict
 
     def transform(self, input_tensor: torch.Tensor):
@@ -225,12 +233,15 @@ class BaseTransform(nn.Module):
         elif self.share == 'channel':
             # Initialize a list to hold transformed batch elements
             transformed = []
+
             for i in range(input_tensor.shape[1]):  # Loop over batch elements
                 # Select the i-th batch element
                 batch_element = input_tensor[:, i].unsqueeze(0).unsqueeze(0)
+
                 # Apply the transformation
                 transformed_element = self.transform(batch_element)[0, 0]
                 transformed.append(transformed_element)
+
             # Stack the transformed elements back into a tensor
             return torch.stack(transformed, dim=1)
 
@@ -241,6 +252,7 @@ class BaseTransform(nn.Module):
                 channel = input_tensor[minibatch].unsqueeze(0)
                 transformed_channel = self.transform(channel)[0]
                 transformed_channels.append(transformed_channel)
+
             # Stack the transformed channels back into a tensor along channel dimension
             return torch.stack(transformed_channels, dim=0)
 
@@ -248,18 +260,23 @@ class BaseTransform(nn.Module):
         elif self.share is False:
             # Initialize a list to hold transformed batch elements
             transformed = []
+
             for i in range(input_tensor.shape[0]):
                 # Initialize a list to hold transformed channels for the i-th batch element
                 transformed_channels = []
+
                 for c in range(input_tensor.shape[1]):
                     # Select the (i, c)-th channel
                     channel = input_tensor[i, c].unsqueeze(0).unsqueeze(0)
+
                     # Apply the transformation
                     transformed_channel = self.transform(channel)[0][0]
                     transformed_channels.append(transformed_channel)
+
                 # Stack the transformed channels back into a tensor for the i-th batch element
                 transformed_element = torch.stack(transformed_channels, dim=0)
                 transformed.append(transformed_element)
+
             # Stack the transformed batch elements back into a tensor
             return torch.stack(transformed, dim=0)
         else:
@@ -321,15 +338,18 @@ class TransformList(nn.Module):
         super().__init__()
         # Assign instance attribute
         self.transforms = transforms
+
         # If global probability is defined, make it into list equal to the length of the transforms
         if not isinstance(probabilities, (list | tuple)):
             # Will resilt in a list of identically distributed Bernoulli trials
             probabilities = [probabilities] * len(transforms)
+
         # If probabilities is a list but not length is not equal to transforms, we have a problem!
         elif isinstance(probabilities, (list | tuple)):
             assert len(transforms) == len(probabilities), (
                 "Transforms and probabilities must have the same length."
             )
+
         # Make a list of independent Bernoulli trials associated with the respective transform
         self.apply_transform_probs = [Bernoulli(p=p) for p in probabilities]
 
@@ -346,6 +366,7 @@ class TransformList(nn.Module):
         """
         # Container that we will sequentially populate with serialized transfomations
         serialized_transforms = []
+
         # Iterate through the transformations and corresponding Bernoulli samplers
         for transform, apply_prob in zip(self.transforms, self.apply_transform_probs):
             if hasattr(transform, 'serialize') and callable(transform.serialize):
@@ -354,9 +375,11 @@ class TransformList(nn.Module):
                     "apply_probability": apply_prob.theta['p']
                 })
             else:
+
                 raise ValueError(
                     f"Transform {type(transform).__name__} does not support serialization."
                 )
+
         return serialized_transforms
 
     def append(self, transform: nn.Module):
@@ -391,10 +414,12 @@ class TransformList(nn.Module):
             The transformed tensor.
         """
         for transform, apply_prob in zip(self.transforms, self.apply_transform_probs):
+
             # Sample a binary decision to apply a particular transform or not
             apply_transform = apply_prob().item()
             if apply_transform:
                 input_tensor = transform(input_tensor)
+
         return input_tensor
 
 
@@ -524,9 +549,11 @@ class Resize(nn.Module):
         - When defining `size` do not include batch or channel dimensions, only spatial dims.
         """
         super().__init__()
+
         # Either scale factor or size must be defined. If neither is, make scale factor 1.
         if size is None and scale_factor is None:
             scale_factor = Fixed(1)
+
         elif scale_factor is not None:
             # Make a fixed if passed a single number. Maks sampler if passed sampler.
             scale_factor = Fixed.make(scale_factor)
@@ -561,6 +588,7 @@ class Resize(nn.Module):
             recompute_scale_factor=self.recompute_scale_factor,
             antialias=self.antialias,
         )
+
         return resized_tensor
 
 
@@ -643,6 +671,7 @@ class SoftQuantize(BaseTransform):
         torch.Tensor
             Softly quantized tensor with the same dimensions as `input_tensor`.
         """
+
         return utils.soft_quantize(
             input_tensor=input_tensor,
             nb_bins=self.nb_bins,
@@ -680,6 +709,7 @@ class MSE(nn.Module):
         torch.Tensor
             The mean squared error between `input_tensor` and `target_tensor`.
         """
+
         return utils.mse_loss(input_tensor=input_tensor, target_tensor=target_tensor)
 
 
@@ -726,6 +756,7 @@ class GaussianBlur(BaseTransform):
         torch.Tensor
             The smoothed tensor.
         """
+
         return utils.gaussian_smoothing(
             input_tensor=input_tensor,
             kernel_size=self.kernel_size,
@@ -924,6 +955,7 @@ class RandomCrop(BaseTransform):
         torch.Tensor
             The tensor that has been randomly cropped.
         """
+
         return utils.random_crop(
             input_tensor=input_tensor,
             crop_proportion=self.crop_proportion,
@@ -1003,6 +1035,7 @@ class RandomClip(BaseTransform):
         torch.Tensor
             The clipped tensor (if Bernoulli trial defined by parameter `clip_prob` is successful).
         """
+
         return utils.random_clip(
             input_tensor=input_tensor,
             clip_min=self.clip_min,
@@ -1093,6 +1126,7 @@ class RandomGamma(BaseTransform):
             The tensor after applying the gamma transformation. If the transformation is not applied
             (based on `prob`), the original `input_tensor` is returned unchanged.
         """
+
         return utils.random_gamma(
             input_tensor=input_tensor,
             gamma=self.gamma,
@@ -1269,6 +1303,7 @@ class SampleImageFromLabels(BaseTransform):
         torch.Tensor
             A tensor of sampled image intensities with the same shape as `label_tensor`.
         """
+
         return utils.sample_image_from_labels(
             label_tensor,
             self.mean_sampler,

@@ -52,9 +52,11 @@ def register_init_arguments(func: Callable) -> Callable:
         if 'theta' in params:
             theta = params.pop('theta')
             for key, value in theta.items():
+
                 # If the value is a Sampler instance, store its arguments recursively
                 if isinstance(value, Sampler):
                     self.arguments[key] = value.serialize()  # Or value.arguments for direct args
+
                 else:
                     self.arguments[key] = value
 
@@ -79,11 +81,14 @@ def ensure_list(x, size=None, crop=True, **kwargs):
     """
     if not isinstance(x, (list, tuple, range, Generator)):
         x = [x]
+
     elif not isinstance(x, list):
         x = list(x)
+
     if size and len(x) < size:
         default = kwargs.get('default', x[-1] if x else None)
         x += [default] * (size - len(x))
+
     if size and crop:
         x = x[:size]
 
@@ -222,8 +227,10 @@ class Sampler:
         else:
             # We need to determine the max len among all parameter lists (since it's not specified)
             max_length = 0
+
             for param_value in theta.values():
                 if isinstance(param_value, (list, tuple)):
+                    # If list, check if len exceeds `max_length`
                     max_length = max(max_length, len(param_value))
 
             if max_length == 0:
@@ -270,8 +277,11 @@ class Sampler:
         """
         if n:
             values = tuple(ensure_list(value, n) for value in values)
+
         if isinstance(values[0], list):
+            # Apply function to each argument in the list independently
             return [fn(*args) for args in zip(*values)]
+
         else:
             return fn(*values)
 
@@ -302,8 +312,10 @@ class Sampler:
         AttributeError: c
         """
         theta = self.__getattribute__('theta')
+
         if item in theta:
             return theta[item]
+
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{item}'")
 
     def __setattr__(self, item: str, value: Any) -> None:
@@ -322,8 +334,10 @@ class Sampler:
         """
         if item == 'theta':
             return super().__setattr__(item, value)
+
         if 'theta' in self.__dict__ and item in self.theta:
             self.theta[item] = value
+
         else:
             return super().__setattr__(item, value)
 
@@ -348,14 +362,17 @@ class Sampler:
         # Determine the sample shape based on `n`
         if n is None:
             shape = [1]
+
         elif isinstance(n, int):
             if n <= 0:
                 raise ValueError("`n` must be a positive integer.")
             shape = [n]
+
         elif isinstance(n, (list, tuple)):
             if not all(isinstance(dim, int) and dim > 0 for dim in n):
                 raise ValueError("All elements in `n` must be positive integers.")
             shape = list(n)
+
         else:
             raise TypeError("`n` must be `None`, an `int`, or a list/tuple of ints.")
 
@@ -365,8 +382,10 @@ class Sampler:
         # Format the output based on the input `n`
         if n is None:
             return samples.view(-1)[0].item()
+
         elif isinstance(n, int):
             return samples.view(-1).tolist()
+
         else:
             return samples
 
@@ -405,10 +424,13 @@ class Sampler:
         state_dict = {
             # The qualified name of the class (for reconstruction purposes)
             'qualname': self.__class__.__name__,
+
             # Parent class, for more broad taxonomy/snapshot view
             'parent': type(self).__bases__[0].__name__,
+
             # The module that the sample may be found in (and reconstructed from)
             'module': self.__module__,
+
             # The sampler's parameters
             'theta': self.arguments,
         }
@@ -655,8 +677,10 @@ class Normal(Sampler):
         # Validate parameters
         if not isinstance(mean, (int, float)):
             raise TypeError(f"`mean` must be an int or float, got {type(mean).__name__}")
+
         if not isinstance(variance, (int, float)):
             raise TypeError(f"`variance` must be an int or float, got {type(variance).__name__}")
+
         if variance <= 0:
             raise ValueError("`variance` must be positive.")
 
@@ -677,6 +701,7 @@ class Normal(Sampler):
         # Extract mean and var
         mean = self.theta.get('mean', 0.0)
         variance = self.theta.get('variance', 1.0)
+
         # Calculate sigma
         sigma = variance ** 0.5
         distribution = torch.distributions.Normal(loc=mean, scale=sigma)
@@ -739,6 +764,7 @@ class Bernoulli(Sampler):
         # Validate parameter
         if not isinstance(p, (int, float)):
             raise TypeError(f"`p` must be an int or float, got {type(p).__name__}")
+
         if not 0 <= p <= 1:
             raise ValueError("`p` must be between 0 and 1 inclusive.")
 
@@ -816,6 +842,7 @@ class Poisson(Sampler):
         # Validate parameter
         if not isinstance(rate, (int, float)):
             raise TypeError(f"`rate` must be an int or float, got {type(rate).__name__}")
+
         if rate <= 0:
             raise ValueError("`rate` must be a positive value.")
 
@@ -911,8 +938,10 @@ class LogNormal(Sampler):
         # Validate parameters
         if not isinstance(mean, (int, float)):
             raise TypeError(f"`mean` must be an int or float, got {type(mean).__name__}")
+
         if not isinstance(variance, (int, float)):
             raise TypeError(f"`variance` must be an int or float, got {type(variance).__name__}")
+
         if variance <= 0:
             raise ValueError("`variance` must be a positive value.")
 
@@ -933,10 +962,13 @@ class LogNormal(Sampler):
         # Extract parameters
         mean = self.theta.get('mean', 0.0)
         variance = self.theta.get('variance', 1.0)
+
         # Calculate sigma
         sigma = variance ** 0.5
+
         # Create LogNormal distribution
         distribution = torch.distributions.LogNormal(loc=mean, scale=sigma)
+
         # Sample from the distribution
         samples = distribution.sample(shape, **backend)
 
@@ -1010,8 +1042,10 @@ class RandInt(Sampler):
         # Validate parameters
         if not isinstance(low, int):
             raise TypeError(f"`low` must be an int, got {type(low).__name__}")
+
         if not isinstance(high, int):
             raise TypeError(f"`high` must be an int, got {type(high).__name__}")
+
         if high <= low:
             raise ValueError("`high` must be greater than `low`.")
 

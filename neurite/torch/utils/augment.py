@@ -102,38 +102,55 @@ def random_crop(
     # Initialize random seed if provided
     if seed is not None:
         torch.manual_seed(seed)
+
     # Calculate the list of allowable dimensions
     allowed_dims = [x for x in range(input_tensor.dim()) if x not in forbidden_dims]
+
     # If `crop_proportion` is float, interpret it as upper bound of uniform distribution.
     crop_sampler = Uniform.make(utils.make_range(0, crop_proportion))
+
     # If prob is a sampler, sample from it
     if isinstance(prob, Sampler):
         prob = prob()
+
     # Make prob into a Bernoulli distribution
     prob = Bernoulli.make(prob)
+
     # Make empty list of slices which we will modufy
     slices = [slice(None)] * input_tensor.dim()
+
     # I think `translation_min` will always be zero. Keep it as such.
     translation_min = 0
+
     # Iterate through each dimension and make croppings for them independently.
     for dim in allowed_dims:
+
         # Decide if we are to crop the current dimension
         if bool(prob()):
+
             # Determine the size of this dimension
             dim_size = input_tensor.shape[dim]
+
             # Sample a random proportion of the dimension to crop and convert it to a point along
             # the axis.
             crop_size = round((1 - crop_sampler()) * dim_size)
+    
             # Calculate the maximum translation to avoid going out of bounds.
             translation_max = dim_size - crop_size
+
             # Prevent errors in the case of no translation
             if translation_min != translation_max:
+
                 # Sample a valid translation (can't be out of bounds!)
                 translation = RandInt(translation_min, translation_max)()
+
             else:
+
                 translation = 0
+
             # Make the slice and override the current (presumably null) slice.
             slices[dim] = slice(translation, crop_size + translation)
+
     return input_tensor[slices]
 
 
@@ -198,17 +215,23 @@ def random_clip(
     # If prob is a sampler, sample from it
     if isinstance(clip_prob, Sampler):
         clip_prob = clip_prob()
+
     # Make prob into a Bernoulli distribution
     clip_prob = Bernoulli.make(clip_prob)
+
     # Sample Bernoulli trial to determine whether to clip
     if bool(clip_prob()):
+
         # Initialize random seed if provided
         if seed is not None:
             torch.manual_seed(seed)
+    
         # If `clip_min` is float, interpret it as a fixed minimum for clipping (clipping floor).
         clip_min = Fixed.make(clip_min)
+
         # If `clip_max` is float, interpret it as a fixed maximum for clipping (clipping ceiling).
         clip_max = Fixed.make(clip_max)
+
         # Sample and apply clips
         return input_tensor.clip_(clip_min(), clip_max())
     else:
@@ -284,12 +307,16 @@ def random_gamma(
     # If prob is a sampler, sample from it
     if isinstance(prob, Sampler):
         prob = prob()
+
     # Make prob into a Bernoulli distribution
     prob = Bernoulli.make(prob)
+
     # Sample Bernoulli trial to determine whether to apply gamma transformation
     if bool(prob()):
+
         # Sample gamma
         gamma = Fixed.make(gamma)()
+
         # Apply gamma transformation
         return input_tensor.pow(gamma)
     else:
