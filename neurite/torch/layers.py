@@ -425,7 +425,7 @@ class TransformList(nn.Module):
 
 class Negate(nn.Module):
     """
-    A PyTorch module that returns the negative of the input tensor.
+    Compute the negative of the input tensor.
     """
 
     def __init__(self):
@@ -454,7 +454,7 @@ class Negate(nn.Module):
 
 class RescaleValues(BaseTransform):
     """
-    A PyTorch module that rescales the values of the input tensor.
+    Scale each element of the input tensor by a multiplicative factor.
     """
 
     def __init__(self, scale_factor: Union[float, int, Sampler]):
@@ -489,7 +489,7 @@ class RescaleValues(BaseTransform):
 
 class Resize(nn.Module):
     """
-    A PyTorch module that resizes the input tensor.
+    Resize the input tensor.
     """
     def __init__(
         self,
@@ -594,7 +594,7 @@ class Resize(nn.Module):
 
 class SoftQuantize(BaseTransform):
     """
-    A PyTorch module that maps continuous values to discrete bins.
+    Map continuous values to discrete bins.
 
     This module maps continuous values to discrete bins while retaining some smoothness/continuous
     which is parametrized by a softening parameter. It is especially useful in the context of
@@ -684,7 +684,7 @@ class SoftQuantize(BaseTransform):
 
 class MSE(nn.Module):
     """
-    A PyTorch module that calculates the mean squared error.
+    Calculate the mean squared error.
     """
 
     def __init__(self):
@@ -715,7 +715,7 @@ class MSE(nn.Module):
 
 class GaussianBlur(BaseTransform):
     """
-    A PyTorch module to blur a {1D, 2D, 3D} tensor by convolving it with a Gaussian kernel.
+    Apply a {1D, 2D, 3D} gaussian blur to the input tensor by convolving it with a Gaussian kernel.
     """
 
     def __init__(
@@ -766,7 +766,7 @@ class GaussianBlur(BaseTransform):
 
 class Resample(BaseTransform):
     """
-    A PyTorch module to resample a tensor.
+    Spatially resample {subsample, resample} the input tensor.
 
     This module resamples the input tensor by a factor of `stride` along the
     specified dimension by interleaving dropouts along it (keeping every `stride`th element).
@@ -893,7 +893,7 @@ class Subsample(Resample):
 
 class RandomCrop(BaseTransform):
     """
-    A PyTorch module that randomly crops the input tensor to a particular field of view.
+    Randomly crop the input tensor to a particular field of view.
 
     This module randomly selects a subset of the allowed dimensions (excluding `forbidden_dims`)
     and crops each independently by a proportion that is randomly drawn from a distribution. The
@@ -967,7 +967,7 @@ class RandomCrop(BaseTransform):
 
 class RandomClip(BaseTransform):
     """
-    A PyTorch module that randomly clips tensor elements outside the bounds.
+    Randomly clip the intensities of the input tensor.
     """
 
     def __init__(
@@ -1047,7 +1047,7 @@ class RandomClip(BaseTransform):
 
 class RandomGamma(BaseTransform):
     """
-    A PyTorch module that applies a random gamma transformation to a tensor.
+    Apply a random gamma transformation to the input tensor.
 
     The gamma transformation adjusts the contrast of the input tensor by applying a non-linear
     operation. Specifically, each element in the tensor is raised to the power of `gamma`. This can
@@ -1137,7 +1137,7 @@ class RandomGamma(BaseTransform):
 
 class RandomIntensityLookup(nn.Module):
     """
-    A PyTorch module to augment the contrast of a single-channel tensor.
+    Randomly augment the contrast of a single-channel tensor.
 
     Compute a smoothly varying lookup table to map the original single-channel tensor (usually a
     greyscale image) to a tensor with a new contrast.
@@ -1158,10 +1158,10 @@ class RandomIntensityLookup(nn.Module):
 
 class RandomClearLabel(nn.Module):
     """
-    A PyTorch module to randomly clear/erase regions from an image corresponding to randomly
+    Randomly clear/erase regions from an image corresponding to randomly
     selected entities/continuious regions in a label map.
 
-    This module identifies unique labels within the `label_tensor` and, based on a specified
+    Identifies unique labels within the `label_tensor` and, based on a specified
     probability, designates regions of the `input_tensor` to be cleared (set to zero) corresponding
     to randomly selected labels. This can be used for tasks such as data augmentation, where certain
     labels are randomly omitted to simulate occlusions or missing annotations.
@@ -1246,8 +1246,7 @@ class RandomClearLabel(nn.Module):
 
 class SampleImageFromLabels(BaseTransform):
     """
-    A PyTorch module that generates an image from a label map by uniformly sampling a random
-    intensity for each label.
+    Generate an image from a label map by uniformly sampling a random intensity for each label.
 
     `SampleImageFromLabels` identifies all unique integer labels in the `label_tensor`, and assigns
     each a mean intensity to the labeled region in the corresponding output image (`sampled_image`).

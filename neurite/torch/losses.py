@@ -36,7 +36,7 @@ from torch import nn
 
 class Dice(nn.Module):
     """
-    A PyTorch module to compute the (hard or soft) Dice Coefficient between two tensors.
+    Compute the (hard or soft) Dice Coefficient between two tensors.
     """
     def __init__(self):
         """
@@ -53,7 +53,7 @@ class Dice(nn.Module):
 
 class SoftDice(nn.Module):
     """
-    A PyTorch module to compute the Soft Dice Coefficient between two tensors.
+    Compute the Soft Dice Coefficient between two tensors.
     """
     def __init__(self):
         """
@@ -70,7 +70,7 @@ class SoftDice(nn.Module):
 
 class HardDice(nn.Module):
     """
-    A PyTorch module to compute the Hard Dice Coefficient between two tensors.
+    Compute the Hard Dice Coefficient between two tensors.
     """
     def __init__(self):
         """
@@ -87,7 +87,7 @@ class HardDice(nn.Module):
 
 class CategoricalCrossentropy(nn.Module):
     """
-    A PyTorch module to compute the Categorical Crossentropy between two tensors.
+    Compute the Categorical Crossentropy between two tensors.
     """
     def __init__(self):
         """
@@ -104,7 +104,7 @@ class CategoricalCrossentropy(nn.Module):
 
 class MeanSquaredErrorProb(nn.Module):
     """
-    A PyTorch module that computes the Mean Squared Error between two tensors.
+    Compute the Mean Squared Error between two tensors.
     """
     def __init__(self):
         """
