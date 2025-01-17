@@ -21,8 +21,8 @@ class BasicUNet(nn.Module):
     ----------
     downsampling_conv_blocks : nn.ModuleList
         Downsampling convolutional blocks.
-    bottleneck : nn.Module
-        Central bottleneck layer.
+    lowest_resolution_conv_block : nn.Module
+        Central convolutional block at the lowest spatial resolution.
     upsampling_conv_blocks : nn.ModuleList
         Upsampling convolutional blocks.
     out_layer : nn.Module
@@ -80,7 +80,6 @@ class BasicUNet(nn.Module):
         order : str, optional
             Order of operations in each convolutional block (e.g., 'ncaca').
 
-
         Raises
         ------
 
@@ -109,8 +108,8 @@ class BasicUNet(nn.Module):
             order=order
         )
 
-        # Bottleneck
-        self.bottleneck = modules.ConvBlock(
+        # Convolutional block between downsampling and upsampling arms (lowest resolution)
+        self.lowest_resolution_conv_block = modules.ConvBlock(
             ndim=ndim,
             in_channels=self.nb_features[-1],
             out_channels=self.nb_features[-1],
@@ -129,7 +128,7 @@ class BasicUNet(nn.Module):
             upsample_padding=0,
         )
 
-        # Final convolution
+        # Final convolutional block
         self.out_layer = modules.ConvBlock(
             ndim=ndim,
             in_channels=nb_features[0],
@@ -159,8 +158,8 @@ class BasicUNet(nn.Module):
             feature_tensor, residual = downsampling_conv_block(feature_tensor, return_residual=True)
             skip_connections.append(residual)  # Save for skip connection
 
-        # Bottleneck
-        feature_tensor = self.bottleneck(feature_tensor)
+        # Convolutional block between downsampling and upsampling arms (lowest resolution)
+        feature_tensor = self.lowest_resolution_conv_block(feature_tensor)
 
         # Upsampling path
         for i, upsampling_conv_block in enumerate(self.upsampling_conv_blocks):
