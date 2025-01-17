@@ -9,8 +9,8 @@ __all__ = [
     "ConvBlock",
     "TransposedConv",
     "Pool",
-    "EncoderBlock",
-    "DecoderBlock"
+    "DownsampleConvBlock",
+    "UpsampleConvBlock"
 ]
 
 from typing import Union, Type, Optional
@@ -718,9 +718,9 @@ class Pool(nn.Module):
         return self.pool(input_tensor)
 
 
-class EncoderBlock(nn.Module):
+class DownsampleConvBlock(nn.Module):
     """
-    Encoder block consisting of a convolutional block followed by a pooling layer.
+    Downsampling convoultional block consisting of a `ConvBlock` followed by a pooling layer.
 
     Attributes
     ----------
@@ -745,7 +745,7 @@ class EncoderBlock(nn.Module):
         order='nca',
     ):
         """
-        Initialize the `EncoderBlock`.
+        Initialize the `DownsampleConvBlock`.
 
         Parameters
         ----------
@@ -778,6 +778,7 @@ class EncoderBlock(nn.Module):
             - `'a'`: Activation
         """
         super().__init__()
+
         self.conv_block = ConvBlock(
             ndim=ndim,
             in_channels=in_channels,
@@ -789,11 +790,12 @@ class EncoderBlock(nn.Module):
             activation=activation,
             order=order,
         )
+
         self.pool = Pool(ndim=ndim, pool_mode=pool_mode, kernel_size=pool_kernel_size)
 
     def forward(self, input_tensor: torch.Tensor, return_residual: bool = False) -> torch.Tensor:
         """
-        Forward pass of the encoder block.
+        Forward pass of the downsampling convolutional block.
 
         Parameters
         ----------
@@ -812,9 +814,10 @@ class EncoderBlock(nn.Module):
             return self.pool(self.conv_block(input_tensor))
 
 
-class DecoderBlock(nn.Module):
+class UpsampleConvBlock(nn.Module):
     """
-    Decoder block consisting of a transposed convolution followed by a convolutional block.
+    Upsampling convoultional block consisting of a `TransposedConvBlock` followed by a
+    `ConvBlock`.
 
     Attributes
     ----------
@@ -840,7 +843,7 @@ class DecoderBlock(nn.Module):
         order: str = 'nca'
     ):
         """
-        Initialize the `DecoderBlock`.
+        Initialize `UpsampleConvBlock`.
 
         Parameters
         ----------
@@ -883,6 +886,7 @@ class DecoderBlock(nn.Module):
             stride=upsample_stride,
             padding=upsample_padding,
         )
+
         self.conv_block = ConvBlock(
             ndim=ndim,
             in_channels=in_channels + in_channels,
@@ -897,7 +901,7 @@ class DecoderBlock(nn.Module):
 
     def forward(self, input_tensor: torch.Tensor, residual: torch.Tensor = None) -> torch.Tensor:
         """
-        Forward pass of the decoder block.
+        Forward pass of the upsampling convolutional block.
 
         Parameters
         ----------
@@ -910,8 +914,10 @@ class DecoderBlock(nn.Module):
             Upsampled tensor after applying transposed convolution and further convolutions.
         """
         if isinstance(residual, torch.Tensor):
+
             features = self.upsample(input_tensor)
             features = torch.cat([features, residual], dim=1)
+
             return self.conv_block(features)
         else:
             return self.conv_block(self.upsample(input_tensor))

@@ -19,12 +19,12 @@ class BasicUNet(nn.Module):
 
     Attributes
     ----------
-    encoders : nn.ModuleList
-        Encoder layers.
+    downsampling_conv_blocks : nn.ModuleList
+        Downsampling convolutional blocks.
     bottleneck : nn.Module
         Central bottleneck layer.
-    decoders : nn.ModuleList
-        Decoder layers.
+    upsampling_conv_blocks : nn.ModuleList
+        Upsampling convolutional blocks.
     out_layer : nn.Module
         Final output layer.
 
@@ -69,7 +69,7 @@ class BasicUNet(nn.Module):
         out_channels : int
             Number of output channels.
         nb_features : List[int]
-            Number of features at each layer of the encoder. Must be a list of
+            Number of features at each level of the unet. Must be a list of
             positive integers.
         norms : Union[List[str], str, None], optional
             Normalization layers to use in each block. Can be a string or a list
@@ -94,13 +94,14 @@ class BasicUNet(nn.Module):
         if not isinstance(activations, list):
             self.activations = [activations] * len(nb_features)
 
-        # Original sequence for encoder
+        # Original sequence for downsampling conv blocks
         self.nb_features = [in_channels, *nb_features]
-        # Inverted sequence for decoder
+
+        # Inverted sequence for upsampling conv blocks
         self.reversed_features = list(reversed(nb_features))
 
-        # Encoder(s)
-        self.encoders = utils.make_encoders(
+        # Downsampling convolutional blocks
+        self.downsampling_conv_blocks = utils.make_downsampling_conv_blocks(
             ndim=ndim,
             nb_features=self.nb_features,
             norms=self.norms,
@@ -116,8 +117,8 @@ class BasicUNet(nn.Module):
             order=order,
         )
 
-        # Decoders
-        self.decoders = utils.make_decoders(
+        # Upsampling convolutional blocks
+        self.upsampling_conv_blocks = utils.make_upsampling_conv_blocks(
             ndim=ndim,
             nb_features=self.reversed_features,
             norms=self.norms,
@@ -152,19 +153,19 @@ class BasicUNet(nn.Module):
         torch.Tensor
             Result of forward pass of the model.
         """
-        # Encoder path
+        # Downsampling path
         skip_connections = []
-        for encoder in self.encoders:
-            feature_tensor, residual = encoder(feature_tensor, return_residual=True)
+        for downsampling_conv_block in self.downsampling_conv_blocks:
+            feature_tensor, residual = downsampling_conv_block(feature_tensor, return_residual=True)
             skip_connections.append(residual)  # Save for skip connection
 
         # Bottleneck
         feature_tensor = self.bottleneck(feature_tensor)
 
-        # Decoder path
-        for i, decoder in enumerate(self.decoders):
+        # Upsampling path
+        for i, upsampling_conv_block in enumerate(self.upsampling_conv_blocks):
             skip = skip_connections[-(i + 1)]
-            feature_tensor = decoder(feature_tensor, skip)
+            feature_tensor = upsampling_conv_block(feature_tensor, skip)
 
         # Output layer
         feature_tensor = self.out_layer(feature_tensor)

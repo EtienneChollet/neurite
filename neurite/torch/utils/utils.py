@@ -37,8 +37,8 @@ __all__ = [
     "random_clear_label",
     "sample_image_from_labels",
     "is_instantiated_normalization",
-    "make_encoders",
-    "make_decoders"
+    "make_downsampling_conv_blocks",
+    "make_upsampling_conv_blocks"
 ]
 
 from typing import Union, List
@@ -898,7 +898,7 @@ def is_instantiated_normalization(obj: object) -> bool:
     return isinstance(obj, normalization_classes)
 
 
-def make_encoders(
+def make_downsampling_conv_blocks(
     ndim: int,
     nb_features: List[int],
     kernel_size: int = 3,
@@ -911,14 +911,14 @@ def make_encoders(
     order: str = 'nca',
 ) -> nn.ModuleList:
     """
-    Create an `nn.ModuleList` of encoder blocks based the number of features per layer.
+    Create an `nn.ModuleList` of downsampling conv blocks based the number of features per layer.
 
     Parameters
     ----------
     ndim : int
         Dimensionality of the convolution (1 for Conv1d, 2 for Conv2d, 3 for Conv3d).
     nb_features : List[int]
-        Number of features at each level in the encoder.
+        Number of features at each level of the downsampling convs.
     kernel_size : int, optional
         Size of the convolving kernel at each level. Default is 3.
     stride : int, optional
@@ -926,15 +926,15 @@ def make_encoders(
     padding : int, optional
         Padding added to all sides of the input. Default is 1.
     norms : list, str, nn.Module, or None, optional
-        Normalization layers for each encoder block.
+        Normalization layers for each downsampling conv block.
     activations : list, str, nn.Module, or None, optional
-        Activation functions for each encoder block.
+        Activation function for each downsampling conv block.
     pool_mode : str, optional
         Pooling mode ('max' or 'avg'). Default is 'max'.
     pool_kernel_size : int, optional
         Kernel size for pooling. Default is 2.
     order : str, optional
-        The order of operations in each encoder block. Default is 'nca' (normalization ->
+        The order of operations in each downsampling conv block. Default is 'nca' (normalization ->
         convolution -> activation). Each character in the string can be specified an arbitrary
         number of times in any order. Each character in the string represents one of the following:
         - `'c'`: Convolution
@@ -944,18 +944,18 @@ def make_encoders(
     Returns
     -------
     nn.ModuleList
-        A list containing the encoder blocks.
+        A list of downsampling convolutional blocks.
 
     Examples
     --------
-    >>> encoders = make_encoders(
+    >>> downsampling_conv_blocks = make_downsampling_conv_blocks(
     ...     ndim=2,
     ...     nb_features=[3, 16, 32],
     ...     kernel_size=3,
     ...     norms=["batch", "instance", "batch"],
     ...     activations="relu"
     ... )
-    >>> print(encoders)
+    >>> print(downsampling_conv_blocks)
     ModuleList(...)
     """
 
@@ -967,12 +967,13 @@ def make_encoders(
     if not isinstance(activations, list):
         activations = [activations] * len(nb_features)
 
-    # Init encoders container
-    encoders = nn.ModuleList()
+    # Init container for downsampling convs
+    downsampling_conv_blocks = nn.ModuleList()
 
-    # Make encoder and append to list of encoders
+    # Make downsampling conv block and append to list of them
     for i in range(len(nb_features) - 1):
-        encoder = modules.EncoderBlock(
+
+        downsampling_conv_block = modules.DownsampleConvBlock(
             ndim=ndim,
             in_channels=nb_features[i],
             out_channels=nb_features[i + 1],
@@ -985,12 +986,13 @@ def make_encoders(
             pool_kernel_size=pool_kernel_size,
             order=order
         )
-        encoders.append(encoder)
 
-    return encoders
+        downsampling_conv_blocks.append(downsampling_conv_block)
+
+    return downsampling_conv_blocks
 
 
-def make_decoders(
+def make_upsampling_conv_blocks(
     ndim: int,
     nb_features: List[int],
     kernel_size: int = 3,
@@ -1004,14 +1006,14 @@ def make_decoders(
     order: str = 'nca'
 ) -> nn.ModuleList:
     """
-    Create an `nn.ModuleList` of decoder blocks based the number of features per layer/level.
+    Create an `nn.ModuleList` of upsampling conv blocks based the number of features per layer/level.
 
     Parameters
     ----------
     ndim : int
         Dimensionality of the convolution (1 for Conv1d, 2 for Conv2d, 3 for Conv3d).
     nb_features : List[int]
-        Number of features at each level in the decoder.
+        Number of features at each upsampling conv block.
     kernel_size : int, optional
         Size of the convolving kernel at each level. Default is 3.
     stride : int, optional
@@ -1021,15 +1023,15 @@ def make_decoders(
     upsample_kernel_size : int, optional
         Kernel size for the transposed convolution at each level. Default is 4.
     upsample_stride : int, optional
-        Stride for the transposed convolution at each level. Default is 2.
+        Stride for the transposed convolution at each upsampling conv block. Default is 2.
     upsample_padding : int, optional
         Padding for the transposed convolution at each level. Default is 1.
     norms : list, str, nn.Module, or None, optional
-        Normalization layers for each encoder block at each level. If a list, must have the same
-        length as nb_features.
+        Normalization layers for each upsampling conv block at each level. If a list, must have the
+        same length as nb_features.
     activations : list, str, nn.Module, or None, optional
-        Activation functions for each encoder block at each level. If a list, must have the same
-        length as nb_features.
+        Activation functions for each upsampling conv block at each level. If a list, must have the
+        same length as nb_features.
     order : str, optional
         The order of operations in the block. Default is 'nca' (normalization -> convolution ->
         activation). Each character in the string can be specified an arbitrary number of times
@@ -1041,7 +1043,7 @@ def make_decoders(
     Returns
     -------
     nn.ModuleList
-        A list containing the decoder blocks.
+        A list of upsampling convolutional blocks.
 
     Notes
     -----
@@ -1049,14 +1051,14 @@ def make_decoders(
 
     Examples
     --------
-    >>> decoders = make_decoders(
+    >>> upsampling_conv_blocks = make_upsampling_conv_blocks(
     ...     ndim=2,
     ...     nb_features=[32, 16, 4],
     ...     upsample_kernel_size=4,
     ...     norms=["batch", "instance", "batch"],
     ...     activations="relu"
     ... )
-    >>> print(decoders)
+    >>> print(upsampling_conv_blocks)
     ModuleList(...)
     """
 
@@ -1068,17 +1070,18 @@ def make_decoders(
     if not isinstance(activations, list):
         activations = [activations] * len(nb_features)
 
-    # Init decoders container
-    decoders = nn.ModuleList()
+    # Init upsampling conv blocks container
+    upsampling_conv_blocks = nn.ModuleList()
 
-    # Make decoder and append to list of encoders
+    # make the number of features for the upsampling conv blocks
     nb_features = [*nb_features, nb_features[-1]]
-    # number = len(nb_features)
+
+    # Make upsampling conv block and append to list of them
     for i in range(len(nb_features) - 1):
 
-        decoder = modules.DecoderBlock(
+        upsampling_conv_block = modules.UpsampleConvBlock(
             ndim=ndim,
-            in_channels=nb_features[i],  # + nb_features[i+1],
+            in_channels=nb_features[i],
             out_channels=nb_features[i + 1],
             kernel_size=kernel_size,
             stride=stride,
@@ -1090,6 +1093,7 @@ def make_decoders(
             activation=activations[-i],
             order=order,
         )
-        decoders.append(decoder)
 
-    return decoders
+        upsampling_conv_blocks.append(upsampling_conv_block)
+
+    return upsampling_conv_blocks
