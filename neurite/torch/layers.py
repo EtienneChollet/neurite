@@ -875,22 +875,6 @@ class Resample(BaseTransform):
         return resampled_tensor
 
 
-class Subsample(Resample):
-    """
-    @deprecated: Use `Resample` instead.
-    A PyTorch module to subsample and upsample a tensor based on specified operations.
-    """
-
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            "Subsample is deprecated and will be removed in future versions. "
-            "Use ResampleModule instead.",
-            DeprecationWarning,
-            stacklevel=2
-        )
-        super().__init__(*args, **kwargs)
-
-
 class RandomCrop(BaseTransform):
     """
     Randomly crop the input tensor to a particular field of view.
@@ -1309,37 +1293,3 @@ class SampleImageFromLabels(BaseTransform):
             self.noise_sampler,
             self.noise_variance
         )
-
-
-class DrawImage(SampleImageFromLabels):
-    """
-    @deprecated: Use `SampleImageFromLabels` instead.
-    A PyTorch module that generates an image from a label map by uniformly sampling a random
-    intensity for each label.
-    """
-
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            "DrawImage is deprecated and will be removed in future versions. "
-            "Use SampleImageFromLabels instead.",
-            DeprecationWarning,
-            stacklevel=2
-        )
-        super().__init__(*args, **kwargs)
-
-
-class LocalParamLayer(nn.Module):
-    """
-    A PyTorch module that applies the fast forier transform to a tensor.
-    """
-    def __init__(self):
-        """
-        Initialize the `FFT` module.
-        """
-        super().__init__()
-
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
-        """
-        Performs the forward pass of the `FFT` module.
-        """
-        raise NotImplementedError("The `FFT` module isn't ready yet :(")
