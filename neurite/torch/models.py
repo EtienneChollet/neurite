@@ -4,7 +4,7 @@ segmentation, registration, or classification. models leverage layers and module
 components of the neurite for streamlined object construction.
 """
 __all__ = [
-    "FlexibleUNet"
+    "BasicUNet"
 ]
 
 from typing import List, Union
@@ -13,8 +13,7 @@ from torch import nn
 from . import modules, utils
 
 
-# TODO: Decide on the name for this with @adrian.dalca
-class FlexibleUNet(nn.Module):
+class BasicUNet(nn.Module):
     """
     Flexible unet with many configuration options!
 
@@ -36,7 +35,7 @@ class FlexibleUNet(nn.Module):
 
     Examples
     --------
-    >>> model = FlexibleUNet(
+    >>> model = BasicUNet(
     ...     ndim=2, in_channels=1, out_channels=1,
     ...     nb_features=[16, 32, 64],
     ...     norms='instance', activations=nn.ReLU
@@ -59,7 +58,7 @@ class FlexibleUNet(nn.Module):
         final_activation: Union[str, nn.Module, None] = nn.Sigmoid(),
     ):
         """
-        Instantiate `FlexibleUNet`
+        Instantiate `BasicUNet`
 
         Parameters
         ----------
@@ -141,7 +140,7 @@ class FlexibleUNet(nn.Module):
 
     def forward(self, feature_tensor: torch.Tensor):
         """
-        Forward pass through the FlexibleUNet model.
+        Forward pass through the `BasicUNet` model.
 
         Parameters
         ----------
