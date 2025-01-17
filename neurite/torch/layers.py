@@ -710,7 +710,7 @@ class MSE(nn.Module):
             The mean squared error between `input_tensor` and `target_tensor`.
         """
 
-        return utils.mse_loss(input_tensor=input_tensor, target_tensor=target_tensor)
+        return utils.mse(input_tensor=input_tensor, target_tensor=target_tensor)
 
 
 class GaussianBlur(BaseTransform):

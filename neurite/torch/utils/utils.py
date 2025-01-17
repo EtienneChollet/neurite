@@ -25,7 +25,7 @@ the License.
 __all__ = [
     "identity",
     "soft_quantize",
-    "mse_loss",
+    "mse",
     "create_gaussian_kernel",
     "gaussian_smoothing",
     "bernoulli",
@@ -144,7 +144,7 @@ def soft_quantize(
     return softly_quantized
 
 
-def mse_loss(input_tensor: torch.Tensor, target_tensor: torch.Tensor) -> torch.Tensor:
+def mse(input_tensor: torch.Tensor, target_tensor: torch.Tensor) -> torch.Tensor:
     """
     Calculates the mean squared error (MSE) between the predicted and target values.
 
@@ -168,7 +168,7 @@ def mse_loss(input_tensor: torch.Tensor, target_tensor: torch.Tensor) -> torch.T
     # Target tensor with zero mean, unit variance
     >>> target_tensor = torch.randn((1, 16, 16, 16))
     # Calculate loss
-    >>> loss = mse_loss(input_tensor, target_tensor)
+    >>> loss = mse(input_tensor, target_tensor)
     # Print loss (should be approximately 2.0)
     >>> print(loss)
     """
